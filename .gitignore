@@ -1,0 +1,8 @@
+/bin/
+/foundationdb-dashboard
+*.exe
+*.test
+*.out
+
+# 项目排除路径
+/web/vendor/

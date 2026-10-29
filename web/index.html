@@ -1,0 +1,3106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>foundationdb-dashboard</title>
+<link rel="stylesheet" href="/vendor/uplot.min.css">
+<script>try{if(localStorage.getItem("fdb-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f5f7;
+    --sidebar: #ececef;
+    --soft: #f5f5f7;
+    --fill: rgba(0, 0, 0, 0.05);
+    --line: rgba(0, 0, 0, 0.08);
+    --line-strong: rgba(0, 0, 0, 0.14);
+    --ink: #1d1d1f;
+    --muted: #6e6e73;
+    --faint: #86868b;
+    --accent: #289dfc;
+    --accent-hover: #148ff2;
+    --on-accent: #fff;
+    --accent-soft: rgba(40, 157, 252, 0.16);
+    --accent-ring: rgba(40, 157, 252, 0.34);
+    --ok: #1d7a38;
+    --ok-soft: rgba(52, 199, 89, 0.16);
+    --bad: #d70015;
+    --bad-soft: rgba(255, 59, 48, 0.12);
+    --warn: #9a5700;
+    --warn-soft: rgba(255, 159, 10, 0.2);
+    --card: #ffffff;
+    --hover: rgba(0, 0, 0, 0.045);
+    --grid: rgba(0, 0, 0, 0.06);
+    --write: #8e8e93;
+    --bad-line: rgba(215, 0, 21, 0.28);
+    --shadow: 0 8px 30px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --scroll: rgba(0, 0, 0, 0.22);
+    --scroll-hover: rgba(0, 0, 0, 0.4);
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", "PingFang SC", "PingFang TC", "Hiragino Sans", "Microsoft YaHei", "Microsoft JhengHei", "Yu Gothic", "Meiryo", sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1c1c1e;
+    --sidebar: #161618;
+    --card: #2c2c2e;
+    --soft: rgba(255, 255, 255, 0.06);
+    --fill: rgba(255, 255, 255, 0.08);
+    --hover: rgba(255, 255, 255, 0.06);
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --ink: #f5f5f7;
+    --muted: #98989d;
+    --faint: #6e6e73;
+    --accent: #289dfc;
+    --accent-hover: #5eb6ff;
+    --on-accent: #fff;
+    --accent-soft: rgba(40, 157, 252, 0.22);
+    --accent-ring: rgba(40, 157, 252, 0.4);
+    --ok: #30d158;
+    --ok-soft: rgba(48, 209, 88, 0.18);
+    --bad: #ff453a;
+    --bad-soft: rgba(255, 69, 58, 0.18);
+    --warn: #ffd60a;
+    --warn-soft: rgba(255, 214, 10, 0.16);
+    --grid: rgba(255, 255, 255, 0.08);
+    --write: #8e8e93;
+    --bad-line: rgba(255, 69, 58, 0.4);
+    --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    --scroll: rgba(255, 255, 255, 0.24);
+    --scroll-hover: rgba(255, 255, 255, 0.42);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 13.5px/1.45 var(--sans);
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button, input, select { font: inherit; color: inherit; letter-spacing: inherit; }
+  button { cursor: pointer; }
+  ::selection { background: var(--accent-soft); }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent-ring);
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scroll);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-hover); }
+  *::-webkit-scrollbar-corner { background: transparent; }
+
+  .shell { height: 100%; display: grid; grid-template-columns: 232px minmax(0, 1fr); background: var(--bg); }
+
+  /* sidebar */
+  .side {
+    display: flex;
+    flex-direction: column;
+    padding: 22px 12px 16px;
+    border-right: 1px solid var(--line);
+    background: var(--sidebar);
+    min-height: 0;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 22px; }
+  .login { position: relative; min-height: 100%; display: grid; place-items: center; padding: 32px 20px; }
+  .login-tools { position: absolute; top: 18px; right: 18px; display: flex; gap: 8px; align-items: flex-start; }
+  .login-tools > .btn, .login-pop > .btn { height: 32px; padding: 0 12px; background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px var(--line); }
+  #login-theme { width: 32px; padding: 0; border-radius: 50%; color: var(--ink); }
+  #login-theme .theme-moon { display: none; }
+  #login-theme.is-dark .theme-sun { display: none; }
+  #login-theme.is-dark .theme-moon { display: block; }
+  .login-pop { position: relative; }
+  .login-pop .lang-list { position: absolute; top: calc(100% + 8px); right: 0; min-width: 168px; background: var(--card); box-shadow: var(--shadow); z-index: 5; }
+  .login-card { width: min(400px, 100%); display: grid; gap: 14px; padding: 32px 28px 28px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); }
+  .login-card h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.03em; color: #0073e0; }
+  .login-card .hint { margin: 0; color: var(--muted); }
+  .login-card label { display: grid; gap: 6px; color: var(--muted); font-size: 12.5px; font-weight: 590; }
+  .login-card input { width: 100%; height: 40px; border: 0; border-radius: 12px; background: var(--soft); color: var(--ink); padding: 0 12px; font: inherit; box-shadow: inset 0 0 0 0.5px var(--line); }
+  .login-card input:focus { outline: none; background: var(--card); box-shadow: 0 0 0 4px var(--accent-ring); }
+  .login-card .btn { width: 100%; height: 40px; margin-top: 4px; }
+  #login-error { margin: 0; min-height: 1.2em; color: var(--bad); font-size: 12.5px; }
+  .icon { width: 16px; height: 16px; flex: none; display: block; fill: currentColor; stroke: none; }
+  .nav a .icon { width: 18px; height: 18px; }
+  .brand b { display: block; font-size: 15px; font-weight: 620; line-height: 1.15; letter-spacing: -0.02em; color: #0073e0; }
+  .brand span { display: block; color: #0073e0; font-size: 12px; margin-top: 1px; }
+  :root[data-theme="dark"] .brand b,
+  :root[data-theme="dark"] .brand span,
+  :root[data-theme="dark"] .login-card h1 { color: #289dfc; }
+  .nav { display: grid; gap: 2px; }
+  .nav a {
+    display: flex; align-items: center; gap: 10px;
+    height: 32px; padding: 0 10px;
+    border-radius: 8px;
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .nav a svg { flex: none; }
+  .nav a:hover { background: var(--hover); }
+  .nav a.on, .nav a.on:hover { background: var(--accent); color: var(--on-accent); font-weight: 500; }
+  .live { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
+  .dot.ok { background: var(--ok); }
+  .dot.bad { background: var(--bad); }
+
+  /* page frame */
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .topbar {
+    height: 54px; flex: none; position: relative; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 0 22px 0 26px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .topbar h1 { margin: 0; font-size: 21px; font-weight: 640; letter-spacing: -0.024em; }
+  .topbar .sub { color: var(--faint); font-size: 13px; margin-left: 10px; font-weight: 450; letter-spacing: -0.01em; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 26px; padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    background: var(--soft); color: var(--muted);
+  }
+  .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .view { flex: 1; min-height: 0; }
+
+  .btn {
+    height: 32px; padding: 0 14px;
+    border: 0;
+    border-radius: 980px;
+    background: var(--fill);
+    color: inherit;
+    font: inherit;
+    font-weight: 530;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  #settings-btn { width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); border-radius: 50%; }
+  #settings-btn:hover { background: var(--fill); color: var(--ink); }
+  .badge { position: relative; cursor: pointer; outline: none; }
+  .tip {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+    width: max-content; max-width: 360px; padding: 10px 12px;
+    background: rgba(29, 29, 31, 0.92); color: #f5f5f7; border: 0;
+    border-radius: 12px; box-shadow: var(--shadow); text-align: left; font-weight: 500;
+  }
+  .tip b { color: #f5f5f7; }
+  .tip span { color: rgba(245, 245, 247, 0.72); }
+  .tip b { display: block; font-size: 13px; }
+  .tip span { display: block; margin-top: 4px; font-size: 12px; overflow-wrap: anywhere; }
+  .tip span.mono { font-family: var(--mono); font-size: 11.5px; }
+  .badge:hover .tip, .badge:focus-within .tip { display: block; }
+  #top-right { display: flex; gap: 10px; align-items: center; }
+  #drawer-root { position: fixed; inset: 0; z-index: 80; visibility: hidden; pointer-events: none; }
+  #drawer-root.open { visibility: visible; pointer-events: auto; }
+  #drawer-backdrop { position: absolute; inset: 0; border: 0; background: rgba(0, 0, 0, 0.32); opacity: 0; transition: opacity 0.22s ease; }
+  #drawer-root.open #drawer-backdrop { opacity: 1; }
+  .drawer {
+    position: absolute; top: 8px; right: 8px; bottom: 8px; width: min(360px, calc(100vw - 16px));
+    display: flex; flex-direction: column;
+    background: color-mix(in srgb, var(--card) 86%, transparent);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    backdrop-filter: saturate(180%) blur(28px);
+    transform: translateX(16px); opacity: 0;
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
+  }
+  #drawer-root.open .drawer { transform: none; opacity: 1; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 0 12px 0 22px; flex: none; }
+  .drawer-head h2 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -0.022em; }
+  .drawer-body { padding: 4px 22px 22px; display: grid; gap: 22px; align-content: start; }
+  .drawer-group { display: grid; gap: 8px; }
+  .drawer-body .field { margin: 0; }
+  .menu-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: -0.01em; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 10px; background: var(--fill); }
+  .seg button { height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-weight: 500; }
+  .seg button.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+  .lang-list { display: grid; gap: 2px; padding: 4px; border-radius: 12px; background: var(--fill); }
+  .lang-list button { height: 34px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); text-align: left; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; font-weight: 500; }
+  .lang-list button.on { background: var(--card); font-weight: 620; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+  .lang-list button.on::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+  :root[data-theme="dark"] .seg button.on, :root[data-theme="dark"] .lang-list button.on { background: #636366; color: #fff; }
+  .drawer .picker-btn, .drawer .picker-opt { font-family: var(--sans); }
+  .btn:hover { background: color-mix(in srgb, var(--fill) 70%, var(--ink) 8%); }
+  .btn.primary { background: var(--accent); color: var(--on-accent); font-weight: 500; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.quiet { background: transparent; color: var(--accent); height: 28px; padding: 0 8px; font-size: 13px; font-weight: 510; border-radius: 8px; }
+  .btn.quiet:hover { background: var(--accent-soft); color: var(--accent); }
+
+  /* overview */
+  #view-overview { overflow: auto; padding: 22px 26px 28px; display: flex; flex-direction: column; }
+  .wrap { width: 100%; flex: 1 0 auto; display: grid; gap: 16px; grid-template-rows: auto auto minmax(160px, 1fr) auto; }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .card { border: 0; border-radius: 20px; background: var(--card); min-width: 0; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px var(--line); }
+  .stat { padding: 18px 20px 16px; }
+  .stat .label { color: var(--muted); font-size: 13px; font-weight: 530; }
+  .stat .num { margin-top: 6px; font-size: 34px; font-weight: 620; letter-spacing: -0.034em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .stat .num small { font-size: 15px; color: var(--faint); font-weight: 500; letter-spacing: -0.02em; }
+  .stat .hint { margin-top: 6px; color: var(--muted); font-size: 12.5px; }
+  .stat .hint.ok { color: var(--ok); }
+  .stat .hint.bad { color: var(--bad); }
+  .cols2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; }
+  .card h2 { margin: 0; padding: 16px 20px 12px; font-size: 15px; font-weight: 620; letter-spacing: -0.018em; border-bottom: 0; display: flex; align-items: center; justify-content: space-between; }
+  .card h2 span { color: var(--faint); font-weight: 450; font-size: 12px; letter-spacing: 0; }
+  .card h2 > span:first-child { color: var(--ink); font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
+  .chart-side { display: flex; align-items: center; gap: 4px; position: relative; }
+  #chart-clear { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+  #chart-clear:hover { background: var(--bad-soft); color: var(--bad); }
+  .chart-pop {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 6;
+    width: 240px; padding: 14px;
+    background: var(--card); color: var(--ink); border: 0;
+    border-radius: 14px; box-shadow: var(--shadow);
+    font-size: 13px; font-weight: 450; line-height: 1.45; text-align: left;
+  }
+  .chart-pop p { margin: 0 0 10px; }
+  .chart-pop .row { display: flex; justify-content: flex-end; gap: 8px; }
+  #chart-clear-ok { background: var(--bad); color: #fff; }
+  #chart-clear-ok:hover { background: #ff3b30; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 20px 6px; gap: 12px; }
+  .metric .label { color: var(--muted); font-size: 12px; }
+  .metric .val { margin-top: 2px; font-size: 20px; font-weight: 620; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .metric .val small { color: var(--faint); font-size: 12px; font-weight: 500; }
+  .card.fill { display: flex; flex-direction: column; }
+  .chart { padding: 6px 12px 10px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #chart { position: relative; flex: 1; min-height: 180px; }
+  #chart .uplot { position: absolute; left: 0; top: 0; }
+  #chart-scroll { height: 0; overflow: hidden; flex: none; }
+  #chart-scroll.on { height: 14px; margin: 2px 4px 0; overflow-x: auto; overflow-y: hidden; }
+  #chart-spacer { height: 1px; }
+  .chart-tip {
+    position: absolute; z-index: 5; pointer-events: none;
+    padding: 8px 12px; border: 0; border-radius: 12px;
+    background: rgba(29, 29, 31, 0.92); color: #f5f5f7; box-shadow: var(--shadow);
+    font-size: 12px; line-height: 1.45; white-space: nowrap;
+    backdrop-filter: blur(12px);
+  }
+  .chart-tip .when { color: rgba(245, 245, 247, 0.72); margin-bottom: 2px; }
+  .chart-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .legend { display: flex; gap: 16px; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .legend i.read { background: var(--accent); }
+  .legend i.write { background: var(--write); }
+  dl.info { margin: 0; padding: 6px 18px 10px; }
+  dl.info div { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  dl.info div:last-child { border-bottom: 0; }
+  dl.info dt { color: var(--muted); flex: none; }
+  dl.info dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; word-break: break-all; }
+  dl.info dd.mono { font-family: var(--mono); font-size: 12.5px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 560; font-size: 12px; background: transparent; white-space: nowrap; letter-spacing: -0.01em; }
+  thead th { padding-top: 4px; }
+  tr:last-child td { border-bottom: 0; }
+  td.mono { font-family: var(--mono); font-size: 12.5px; }
+  #proc-card { min-height: 0; }
+  #proc-card .table-scroll { flex: 1; min-height: 0; overflow: auto; }
+  .chip { display: inline-block; margin: 1px 4px 1px 0; padding: 0 8px; border-radius: 980px; background: var(--fill); border: 0; color: var(--muted); font-size: 12px; line-height: 20px; white-space: nowrap; }
+  .tag { display: inline-block; padding: 0 8px; border-radius: 980px; font-size: 12px; font-weight: 560; line-height: 20px; background: var(--ok-soft); color: var(--ok); }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .rows { padding: 4px 18px 10px; }
+  .row-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .row-item:last-child { border-bottom: 0; }
+  .row-item .mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .row-item p { margin: 0; }
+  .row-item small { color: var(--muted); display: block; }
+  .none { padding: 14px 18px; color: var(--muted); }
+  .alert { padding: 12px 16px; border-radius: 14px; background: var(--bad-soft); color: var(--bad); }
+
+  /* data browser */
+  #view-data { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 12px; padding: 12px; min-height: 0; }
+  #view-data.detail-open { grid-template-columns: 248px minmax(0, 1fr) minmax(320px, 400px); }
+  #detail-close { width: 28px; height: 28px; padding: 0; border-radius: 50%; }
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--card); border: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px var(--line); }
+  .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 48px; padding: 0 14px 0 18px; border-bottom: 0; flex: none; font-weight: 620; letter-spacing: -0.016em; font-size: 15px; }
+  .pane-head small { color: var(--faint); font-weight: 400; }
+  .tree { flex: 1; min-height: 0; overflow: auto; padding: 8px 8px 16px; }
+  .node-row { display: flex; align-items: center; min-height: 28px; border-radius: 7px; }
+  .node-row:hover { background: var(--hover); }
+  .node-row.active, .node-row.active:hover { background: var(--accent); }
+  .node-label { flex: 1; min-width: 0; height: 28px; border: 0; background: transparent; text-align: left; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+  .node-row.active .node-label { color: var(--on-accent); font-weight: 500; }
+  .node-twist, .node-gap { flex: none; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+  .node-twist:hover { background: var(--fill); color: var(--ink); }
+  .node-row.active .node-twist, .node-row.active .node-twist:hover { color: var(--on-accent); background: transparent; }
+  .node-twist .caret { width: 10px; height: 10px; display: block; fill: currentColor; transition: transform 0.12s ease; }
+  .node-row.open .node-twist .caret { transform: rotate(90deg); }
+  .node-more { margin: 2px 0 2px 8px; }
+  .tree-note { padding: 6px 12px; color: var(--muted); font-size: 12.5px; }
+
+  .tools { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 16px 8px; flex: none; }
+  .tool-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tool-row .btn { height: 30px; padding: 0 10px; font-size: 13px; }
+  #search-form { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  #search-form .btn { height: 36px; flex: none; }
+  .search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border: 0; border-radius: 980px; background: var(--soft); box-shadow: inset 0 0 0 0.5px var(--line); }
+  .search:focus-within { background: var(--card); box-shadow: 0 0 0 4px var(--accent-ring); }
+  .search svg { color: var(--faint); flex: none; }
+  #q { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-family: var(--mono); font-size: 13px; height: 32px; }
+  #q::placeholder { font-family: var(--sans); color: var(--faint); }
+  .scope { display: flex; align-items: center; gap: 8px; padding: 0 16px 8px; color: var(--muted); font-size: 12.5px; flex: none; min-height: 28px; }
+  .scope code { font-family: var(--mono); background: var(--soft); border: 0; border-radius: 980px; padding: 1px 8px; color: var(--ink); max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scope .grow { flex: 1; }
+
+  .cols, .keyline { display: grid; grid-template-columns: 16px minmax(0, 1.4fr) minmax(0, 1fr) 84px 64px; gap: 14px; padding: 0 16px; align-items: start; }
+  .cols { align-items: center; padding-top: 6px; padding-bottom: 6px; background: transparent; border-top: 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 560; flex: none; }
+  .pick { width: 15px; height: 15px; margin: 11px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .cols .pick { margin: 0; }
+  .list { flex: 1; min-height: 0; overflow: auto; }
+  .keyline { border-bottom: 1px solid var(--line); }
+  .keyline:hover { background: var(--hover); }
+  .keyline:has(.selected), .keyline:has(.selected):hover { background: var(--accent-soft); box-shadow: none; }
+  button.key { display: grid; grid-column: 2 / -1; grid-template-columns: subgrid; width: 100%; padding: 9px 0; border: 0; border-radius: 0; background: transparent; text-align: left; }
+  button.key:hover { background: transparent; }
+  button.key.selected { background: transparent; }
+  .kcell, .vcell { font-family: var(--mono); font-size: 12.5px; line-height: 1.45; word-break: break-all; }
+  .vcell { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink); }
+  .vcell.bytes { color: var(--muted); }
+  .tcell { display: flex; align-items: flex-start; }
+  .tcell .kindtag { margin: 1px 0 0; }
+  button.key.selected .kindtag { background: var(--card); }
+  .scell { color: var(--muted); font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .banner { margin: 12px 16px; padding: 10px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
+  .empty, .foot { margin: 0; padding: 14px 16px; color: var(--muted); }
+
+  .detail-body { flex: 1; min-height: 0; overflow: auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
+  #detail-body > * { min-width: 0; }
+  .placeholder { color: var(--muted); text-align: center; margin: 40px 12px; }
+  .field-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .box { padding: 10px 12px; border: 0; border-radius: 12px; background: var(--soft); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow: auto; margin: 0; }
+  .box.content { background: var(--soft); font-size: 13px; }
+  .box.plain { font-family: var(--sans); color: var(--muted); }
+  .kindtag { display: inline-block; margin-left: 8px; padding: 0 8px; border-radius: 980px; background: var(--fill); color: var(--muted); border: 0; font-size: 11.5px; font-weight: 600; line-height: 18px; white-space: nowrap; }
+  .kindtag.tuple { background: var(--accent-soft); color: var(--accent); }
+  .kindtag.text { background: var(--ok-soft); color: var(--ok); }
+  .kindtag.json { background: var(--warn-soft); color: var(--warn); }
+  .kindtag.bytes { background: var(--fill); color: var(--muted); }
+  .note { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
+  .kv b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  details { min-width: 0; }
+  details pre { margin: 0; max-width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--soft); font-family: var(--mono); font-size: 12px; line-height: 1.55; overflow: auto; max-height: 260px; }
+  #detail-hex { white-space: normal; overflow-x: hidden; overflow-y: auto; line-height: 1.7; }
+  .hexrow { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6ch; row-gap: 3px; padding-left: 9ch; }
+  .hexrow + .hexrow { margin-top: 6px; }
+  .hexoff { margin-left: -9ch; min-width: 8.4ch; color: var(--faint); white-space: nowrap; }
+  .hexb { white-space: nowrap; }
+  .hexb.mid { margin-left: 0.5ch; }
+  .hexascii { margin-left: 0.5ch; color: var(--muted); white-space: nowrap; }
+  .detail-foot { padding: 12px 16px; border-top: 1px solid var(--line); flex: none; display: grid; gap: 8px; }
+  .detail-actions { display: flex; gap: 6px; }
+  .detail-actions .btn { flex: 1; height: 32px; padding: 0 8px; font-size: 13px; }
+  #watch.on { background: var(--accent-soft); color: var(--accent); }
+  #config-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; padding: 4px 20px 20px; }
+  #config-form label { display: grid; gap: 6px; color: var(--muted); font-size: 12.5px; font-weight: 590; }
+  #config-form input, dialog input, dialog textarea { width: 100%; border: 0; border-radius: 10px; background: var(--soft); color: var(--ink); padding: 8px 12px; font-family: var(--mono); font-size: 13px; box-shadow: inset 0 0 0 0.5px var(--line); }
+  #config-form input:focus, dialog input:focus, dialog textarea:focus { outline: none; background: var(--card); box-shadow: 0 0 0 4px var(--accent-ring); }
+  #config-form input { height: 36px; padding: 0 12px; }
+  #view-config { overflow: auto; padding: 22px 26px 28px; }
+  .config-page { width: 100%; margin: 0 auto; display: grid; gap: 16px; align-content: start; }
+  #cluster-list { padding: 0 20px; }
+  .cluster-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; margin: 0 -8px; padding: 12px 8px; border-bottom: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+  .cluster-row:last-child { border-bottom: 0; }
+  .cluster-row.on { background: var(--fill); }
+  .cluster-row b { display: block; font-weight: 600; }
+  .cluster-row small { display: block; margin-top: 2px; color: var(--muted); font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .cluster-row .note { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+  .cluster-actions { display: flex; gap: 8px; align-items: center; }
+  .cluster-add { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto; gap: 12px; align-items: end; padding: 4px 20px 18px; }
+  .cluster-add label { display: grid; gap: 6px; margin: 0; color: var(--muted); font-size: 12.5px; font-weight: 590; }
+  .cluster-add input { width: 100%; height: 36px; border: 0; border-radius: 10px; background: var(--soft); color: var(--ink); padding: 0 12px; font-family: var(--mono); font-size: 13px; box-shadow: inset 0 0 0 0.5px var(--line); }
+  .cluster-add input:focus { outline: none; background: var(--card); box-shadow: 0 0 0 4px var(--accent-ring); }
+  #cluster-confirm-key { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: var(--soft); font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
+  #cluster-confirm-ok.remove { background: var(--bad); color: #fff; }
+  #cluster-msg { margin: 0; padding: 0 20px 14px; color: var(--muted); font-size: 12.5px; }
+  #config-target { margin: 0; padding: 0 20px 10px; color: var(--muted); font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  #config-locked { grid-column: 1 / -1; margin: 0; color: var(--muted); }
+  #config-form.locked input, #config-form.locked .picker-btn, #config-form.locked #config-actions { opacity: 0.4; pointer-events: none; }
+  .picker { position: relative; width: 100%; }
+  .picker > select { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+  .picker-btn { width: 100%; height: 36px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-radius: 10px; background: var(--soft); color: var(--ink); font-family: var(--mono); font-size: 13px; text-align: left; box-shadow: inset 0 0 0 0.5px var(--line); }
+  .picker.open .picker-btn { background: var(--card); box-shadow: 0 0 0 4px var(--accent-ring); }
+  .picker-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker-btn .icon { width: 14px; height: 14px; color: var(--muted); }
+  .picker-menu { position: absolute; z-index: 60; left: 0; right: 0; top: calc(100% + 6px); padding: 6px; display: grid; gap: 2px; background: var(--card); border: 0; border-radius: 14px; box-shadow: var(--shadow); max-height: 280px; overflow: auto; }
+  .picker-opt { height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-family: var(--mono); font-size: 13px; text-align: left; }
+  .picker-opt:hover, .picker-opt:focus-visible { background: var(--hover); outline: none; }
+  .picker-opt.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  dialog textarea { min-height: 96px; resize: vertical; }
+  dialog .field { display: grid; gap: 4px; margin: 0 0 10px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  #config-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+  #config-msg { margin: 0; color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  #config-note, #config-scope { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 12.5px; }
+  #delete { width: 100%; height: 36px; border: 0; border-radius: 980px; background: var(--bad-soft); color: var(--bad); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  #delete:hover { background: color-mix(in srgb, var(--bad) 18%, transparent); }
+  #delete-selected { height: 28px; padding: 0 12px; border: 0; border-radius: 980px; background: var(--bad-soft); color: var(--bad); font-weight: 600; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+  #delete-selected:hover { background: color-mix(in srgb, var(--bad) 18%, transparent); }
+
+  dialog { width: min(440px, calc(100vw - 32px)); border: 0; border-radius: 20px; padding: 24px; background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.32); }
+  dialog h2 { margin: 0 0 8px; font-size: 21px; font-weight: 650; letter-spacing: -0.024em; }
+  dialog p { margin: 0 0 10px; color: var(--muted); }
+  #confirm-key { padding: 10px 12px; border-radius: 12px; background: var(--soft); border: 0; color: var(--ink); font-family: var(--mono); font-size: 12.5px; word-break: break-all; white-space: pre-wrap; max-height: 180px; overflow: auto; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .actions .btn { height: 36px; padding: 0 14px; }
+  #confirm-ok { background: var(--bad); color: #fff; font-weight: 500; }
+  #confirm-ok:hover { background: #ff3b30; }
+  #confirm-error, #write-error, #rename-error, #io-error, #config-error, #cluster-confirm-error { color: var(--bad); min-height: 1.2em; }
+  #config-diff { padding: 10px 12px; border-radius: 12px; background: var(--soft); border: 0; color: var(--ink); font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
+
+  @media (max-width: 1180px) {
+    #view-data { grid-template-columns: 220px minmax(0, 1fr); padding: 10px; gap: 10px; }
+    #view-data.detail-open { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 360px); }
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols2 { grid-template-columns: 1fr; }
+    .cols, .keyline { grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1fr) 80px; }
+    .cols span:last-child, .scell { display: none; }
+  }
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+    .side { flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+    .brand { padding: 0; }
+    .brand span { display: none; }
+    .nav { display: flex; }
+    #view-data { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); padding: 10px; gap: 10px; }
+    #view-data.detail-open { grid-template-rows: minmax(0, 1fr) minmax(220px, 0.8fr); }
+    #view-data .pane:first-child { display: none; }
+    .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cluster-add { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<!-- Phosphor Icons, MIT. https://github.com/phosphor-icons/core regular. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-layout-grid" viewBox="0 0 256 256" fill="currentColor"><path d="M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z"/></symbol>
+  <symbol id="i-database" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></symbol>
+  <symbol id="i-refresh-cw" viewBox="0 0 256 256" fill="currentColor"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16H211.4L184.81,71.64l-.25-.24a80,80,0,1,0-1.67,114.78,8,8,0,0,1,11,11.63A95.44,95.44,0,0,1,128,224h-1.32A96,96,0,1,1,195.75,60L224,85.8V56a8,8,0,1,1,16,0Z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 256 256" fill="currentColor"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
+  <symbol id="i-trash-2" viewBox="0 0 256 256" fill="currentColor"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 256 256" fill="currentColor"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 256 256" fill="currentColor"><path d="M40,88H73a32,32,0,0,0,62,0h81a8,8,0,0,0,0-16H135a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16Zm64-24A16,16,0,1,1,88,80,16,16,0,0,1,104,64ZM216,168H199a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16h97a32,32,0,0,0,62,0h17a8,8,0,0,0,0-16Zm-48,24a16,16,0,1,1,16-16A16,16,0,0,1,168,192Z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 256 256" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 256 256" fill="currentColor"><path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 256 256" fill="currentColor"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 256 256" fill="currentColor"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 256 256" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 256 256" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol>
+  <symbol id="i-log-in" viewBox="0 0 256 256" fill="currentColor"><path d="M141.66,133.66l-40,40a8,8,0,0,1-11.32-11.32L116.69,136H24a8,8,0,0,1,0-16h92.69L90.34,93.66a8,8,0,0,1,11.32-11.32l40,40A8,8,0,0,1,141.66,133.66ZM200,32H136a8,8,0,0,0,0,16h56V208H136a8,8,0,0,0,0,16h64a8,8,0,0,0,8-8V40A8,8,0,0,0,200,32Z"/></symbol>
+</svg>
+<div id="login" class="login" hidden>
+  <div class="login-tools">
+    <div class="login-pop" id="login-lang">
+      <button id="login-lang-btn" class="btn" type="button" data-i18n-aria="language" aria-label="Language" aria-haspopup="menu">
+        <span id="login-lang-label">English</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </button>
+      <div class="lang-list" id="login-lang-list" hidden>
+        <button type="button" data-lang="en">English</button>
+        <button type="button" data-lang="zh">简体中文</button>
+        <button type="button" data-lang="zh-Hant">繁體中文</button>
+        <button type="button" data-lang="ru">Русский</button>
+        <button type="button" data-lang="ja">日本語</button>
+        <button type="button" data-lang="de">Deutsch</button>
+        <button type="button" data-lang="fr">Français</button>
+      </div>
+    </div>
+    <button id="login-theme" class="btn" type="button" data-i18n-aria="appearance" aria-label="Appearance">
+      <svg class="icon theme-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+      <svg class="icon theme-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
+  </div>
+  <form id="login-form" class="login-card">
+    <h1>FoundationDB Dashboard</h1>
+    <label><span data-i18n="loginUser">Username</span><input id="login-user" name="username" autocomplete="username" spellcheck="false"></label>
+    <label><span data-i18n="loginPassword">Password</span><input id="login-pass" name="password" type="password" autocomplete="current-password"></label>
+    <p id="login-error"></p>
+    <button id="login-submit" class="btn primary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-log-in"/></svg><span data-i18n="login">Sign in</span></button>
+  </form>
+</div>
+<div class="shell" id="app" hidden>
+  <aside class="side">
+    <div class="brand">
+      <div><b>FoundationDB</b><span>Dashboard</span></div>
+    </div>
+    <nav class="nav" data-i18n-aria="mainNav">
+      <a id="nav-overview" href="#/overview">
+        <svg class="icon" aria-hidden="true"><use href="#i-layout-grid"/></svg>
+        <span data-i18n="overview">Overview</span>
+      </a>
+      <a id="nav-data" href="#/data">
+        <svg class="icon" aria-hidden="true"><use href="#i-database"/></svg>
+        <span data-i18n="data">Data</span>
+      </a>
+      <a id="nav-config" href="#/config">
+        <svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>
+        <span data-i18n="config">Configuration</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 id="page-title"><span id="page-name">Overview</span><span class="sub" id="page-sub"></span></h1>
+      <div id="top-right">
+        <span id="top-badge" class="badge" tabindex="0" hidden>
+          <i></i><span class="badge-label"></span>
+          <span id="status-tip" class="tip" role="tooltip"></span>
+        </span>
+        <button id="logout-btn" class="btn" type="button" hidden data-i18n="logout">Sign out</button>
+        <button id="settings-btn" class="btn" type="button" aria-label="Settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      </div>
+    </header>
+
+    <section id="view-overview" class="view">
+      <div class="wrap">
+        <div id="ov-error" class="alert" hidden></div>
+        <div class="cards">
+          <div class="card stat"><div class="label" data-i18n="coordinators">Coordinators</div><div class="num" id="c-coord">-</div><div class="hint" id="c-coord-sub"></div></div>
+          <div class="card stat"><div class="label" data-i18n="storageServers">Storage</div><div class="num" id="c-storage">-</div><div class="hint" id="c-storage-sub"></div></div>
+          <div class="card stat"><div class="label" data-i18n="proxies">Proxies</div><div class="num" id="c-proxy">-</div><div class="hint" id="c-proxy-sub"></div></div>
+          <div class="card stat"><div class="label" data-i18n="clients">Clients</div><div class="num" id="c-clients">-</div><div class="hint" id="c-clients-sub" data-i18n="activeConnections">Active connections</div></div>
+        </div>
+        <div class="cols2">
+          <div class="card fill">
+            <h2>
+              <span data-i18n="workload">Workload</span>
+              <span class="chart-side">
+                <span id="chart-span">Recording in the background · grain 15m · scroll to zoom</span>
+                <button id="chart-clear" type="button" data-i18n-aria="clearChart" aria-label="Delete values"><svg class="icon" aria-hidden="true"><use href="#i-trash-2"/></svg></button>
+                <div id="chart-clear-pop" class="chart-pop" hidden>
+                  <p data-i18n="clearChartAsk">Delete the recorded reads and writes? Recording starts again from now.</p>
+                  <div class="row">
+                    <button id="chart-clear-cancel" class="btn quiet" type="button" data-i18n="cancel">Cancel</button>
+                    <button id="chart-clear-ok" class="btn" type="button" data-i18n="clearChart">Delete values</button>
+                  </div>
+                </div>
+              </span>
+            </h2>
+            <div class="metrics" id="metrics"></div>
+            <div class="chart">
+              <div id="chart" role="img" data-i18n-aria="chartLabel"></div>
+              <div id="chart-scroll" aria-hidden="true"><div id="chart-spacer"></div></div>
+              <div class="legend"><span><i class="read"></i><span data-i18n="readOps">Read ops/s</span></span><span><i class="write"></i><span data-i18n="writeOps">Write ops/s</span></span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2 data-i18n="clusterInfo">Cluster</h2>
+            <dl class="info" id="info"></dl>
+          </div>
+        </div>
+        <div class="card fill" id="proc-card">
+          <h2><span data-i18n="processes">Processes</span> <span id="proc-count"></span></h2>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th data-i18n="address">Address</th><th data-i18n="className">Class</th><th data-i18n="roles">Roles</th><th>CPU</th><th data-i18n="memory">Memory</th><th data-i18n="diskFree">Disk free</th><th data-i18n="uptime">Uptime</th><th data-i18n="status">Status</th></tr></thead>
+              <tbody id="procs"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="cols2" style="grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr)">
+          <div class="card"><h2 data-i18n="messages">Messages</h2><div id="messages"></div></div>
+          <div class="card"><h2 data-i18n="coordinators">Coordinators</h2><div id="coords"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-config" class="view" hidden>
+      <div class="config-page">
+        <div class="card" id="cluster-card">
+          <h2 data-i18n="clusters">Clusters</h2>
+          <div id="cluster-list"></div>
+          <form id="cluster-add" class="cluster-add">
+            <label class="field"><span data-i18n="clusterName">Name</span><input id="cluster-name" autocomplete="off" data-i18n-placeholder="clusterNamePh" placeholder="lab"></label>
+            <label class="field"><span data-i18n="clusterConn">Connection string</span><input id="cluster-conn" spellcheck="false" autocomplete="off" data-i18n-placeholder="clusterConnPh" placeholder="docker:docker@host:4500"></label>
+            <button class="btn primary" type="submit" data-i18n="clusterAdd">Add cluster</button>
+          </form>
+          <p id="cluster-msg"></p>
+        </div>
+        <div class="card" id="config-card">
+          <h2><span id="config-title">Cluster configuration</span></h2>
+          <p id="config-target"></p>
+          <form id="config-form">
+            <label><span data-i18n="redundancy">Redundancy</span>
+              <select id="cfg-redundancy">
+                <option value="single">single</option>
+                <option value="double">double</option>
+                <option value="triple">triple</option>
+                <option value="three_data_hall">three_data_hall</option>
+              </select>
+            </label>
+            <label><span data-i18n="engine">Storage engine</span>
+              <select id="cfg-engine">
+                <option value="ssd-2">ssd-2</option>
+                <option value="ssd-1">ssd-1</option>
+                <option value="memory">memory</option>
+                <option value="ssd-rocksdb-v1">ssd-rocksdb-v1</option>
+                <option value="ssd-sharded-rocksdb">ssd-sharded-rocksdb</option>
+              </select>
+            </label>
+            <label><span data-i18n="commitProxies">Commit proxies</span><input id="cfg-commit" inputmode="numeric" autocomplete="off"></label>
+            <label><span data-i18n="grvProxies">GRV proxies</span><input id="cfg-grv" inputmode="numeric" autocomplete="off"></label>
+            <label><span data-i18n="logs">Logs</span><input id="cfg-logs" inputmode="numeric" autocomplete="off"></label>
+            <label><span data-i18n="resolvers">Resolvers</span><input id="cfg-resolvers" inputmode="numeric" autocomplete="off"></label>
+            <p id="config-locked" hidden></p>
+            <p id="config-scope" data-i18n="clusterNote">This panel writes redundancy, the storage engine, and the four role counts. Coordinators, regions, encryption, and tenant mode stay with fdbcli.</p>
+            <p id="config-note"></p>
+            <div id="config-actions">
+              <button class="btn primary" type="submit" data-i18n="saveConfig">Save configuration</button>
+              <p id="config-msg"></p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-data" class="view" hidden>
+      <div class="pane">
+        <div class="pane-head"><span data-i18n="directory">Directory</span> <button class="btn quiet" id="tree-refresh" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw"/></svg><span data-i18n="refresh">Refresh</span></button></div>
+        <div id="tree" class="tree"></div>
+      </div>
+      <div class="pane">
+        <div class="tools">
+          <form id="search-form">
+            <div class="search">
+              <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+              <input id="q" spellcheck="false" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Search by tuple, for example &quot;M&quot; or (&quot;M&quot;, uuid(…), &quot;l&quot;)">
+            </div>
+            <button class="btn primary" type="submit" data-i18n="search">Search</button>
+          </form>
+          <div class="tool-row">
+            <button class="btn" id="create" type="button"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="createKey">New key</span></button>
+            <button class="btn" id="export" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="exportView">Export</span></button>
+            <button class="btn" id="import" type="button"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span data-i18n="importView">Import</span></button>
+            <button class="btn" id="backup" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="backup">Backup</span></button>
+            <button class="btn" id="restore" type="button"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span data-i18n="restore">Restore</span></button>
+            <input id="import-file" type="file" accept="application/json,.json" hidden>
+            <input id="restore-file" type="file" accept="application/json,.json" hidden>
+          </div>
+        </div>
+        <div class="scope"><span id="scope-text" data-i18n="allKeys">All keys</span><code id="scope-code" hidden></code><span class="grow"></span><button id="delete-selected" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-trash-2"/></svg><span data-i18n="deleteSelected">Delete selected</span></button><span id="count"></span></div>
+        <div class="cols"><input id="pick-all" class="pick" type="checkbox" data-i18n-aria="selectAll" aria-label="Select all"><span data-i18n="key">Key</span><span data-i18n="value">Value</span><span data-i18n="type">Type</span><span style="text-align:right" data-i18n="size">Size</span></div>
+        <div id="list" class="list">
+          <div id="list-error" class="banner" hidden></div>
+          <div id="keys"></div>
+          <p id="empty" class="empty" hidden data-i18n="noKeys">No matching keys</p>
+          <p id="foot" class="foot"></p>
+        </div>
+      </div>
+      <div class="pane" id="detail-pane" hidden>
+        <div class="pane-head"><span data-i18n="detail">Detail</span><button id="detail-close" class="btn quiet" type="button" data-i18n-aria="closeDetail" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+        <div class="detail-body">
+          <p id="detail-empty" class="placeholder" data-i18n="pickRow">Select a row to see its value</p>
+          <div id="detail-body" hidden style="display:grid;gap:14px;grid-template-columns:minmax(0,1fr)">
+            <div>
+              <div class="field-title"><span><span data-i18n="value">Value</span><span id="detail-kind" class="kindtag"></span></span><button class="btn quiet" id="copy-content" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-i18n="copy">Copy</span></button></div>
+              <pre id="detail-content" class="box content"></pre>
+              <p id="detail-note" class="note" hidden></p>
+            </div>
+            <div>
+              <div class="field-title"><span data-i18n="key">Key</span><button class="btn quiet" id="copy-key" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span data-i18n="copy">Copy</span></button></div>
+              <pre id="detail-key" class="box"></pre>
+            </div>
+            <div class="kv"><span data-i18n="valueLength">Length</span><b id="detail-len"></b></div>
+            <details open><summary data-i18n="hex">Hex</summary><pre id="detail-hex"></pre></details>
+          </div>
+        </div>
+        <div id="detail-foot" class="detail-foot" hidden>
+          <div class="detail-actions">
+            <button class="btn" id="edit" type="button"><svg class="icon" aria-hidden="true"><use href="#i-pencil"/></svg><span data-i18n="editValue">Edit value</span></button>
+            <button class="btn" id="rename" type="button"><svg class="icon" aria-hidden="true"><use href="#i-pencil"/></svg><span data-i18n="renameKey">Rename</span></button>
+            <button class="btn" id="watch" type="button"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span data-i18n="watchKey">Watch</span></button>
+          </div>
+          <button id="delete" type="button"><svg class="icon" aria-hidden="true"><use href="#i-trash-2"/></svg><span data-i18n="deleteKey">Delete this key</span></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="drawer-root" aria-hidden="true">
+  <button id="drawer-backdrop" type="button" tabindex="-1" data-i18n-aria="closeDetail" aria-label="Close"></button>
+  <aside id="settings-drawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <h2 id="drawer-title" data-i18n="settings">Settings</h2>
+      <button id="drawer-close" class="btn quiet" type="button" data-i18n-aria="closeDetail" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-group">
+        <div class="menu-label" data-i18n="language">Language</div>
+        <div class="lang-list" id="lang-list">
+          <button type="button" data-lang="en">English</button>
+          <button type="button" data-lang="zh">简体中文</button>
+          <button type="button" data-lang="zh-Hant">繁體中文</button>
+          <button type="button" data-lang="ru">Русский</button>
+          <button type="button" data-lang="ja">日本語</button>
+          <button type="button" data-lang="de">Deutsch</button>
+          <button type="button" data-lang="fr">Français</button>
+        </div>
+      </div>
+      <div class="drawer-group">
+        <div class="menu-label" data-i18n="appearance">Appearance</div>
+        <div class="seg" id="theme-seg">
+          <button type="button" data-theme="light" data-i18n="light">Light</button>
+          <button type="button" data-theme="dark" data-i18n="dark">Dark</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<dialog id="confirm">
+  <h2 data-i18n="deleteTitle">Delete this key?</h2>
+  <p data-i18n="deleteHint">Only this one key is removed.</p>
+  <p id="confirm-key"></p>
+  <p id="confirm-error"></p>
+  <div class="actions">
+    <button id="confirm-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="confirm-ok" class="btn" type="button" data-i18n="confirmDelete">Delete</button>
+  </div>
+</dialog>
+
+<dialog id="write">
+  <h2 id="write-title" data-i18n="createKey">New key</h2>
+  <label class="field"><span data-i18n="key">Key</span><input id="write-key" spellcheck="false" autocomplete="off" data-i18n-placeholder="keyPlaceholder" placeholder="(&quot;demo&quot;, &quot;note&quot;, 1)"></label>
+  <label class="field"><span data-i18n="type">Type</span>
+    <select id="write-kind">
+      <option value="text">text</option>
+      <option value="json">json</option>
+      <option value="tuple">tuple</option>
+      <option value="bytes">bytes</option>
+    </select>
+  </label>
+  <label class="field"><span data-i18n="value">Value</span><textarea id="write-value" spellcheck="false"></textarea></label>
+  <p id="write-error"></p>
+  <div class="actions">
+    <button id="write-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="write-ok" class="btn primary" type="button" data-i18n="save">Save</button>
+  </div>
+</dialog>
+
+<dialog id="rename-dlg">
+  <h2 data-i18n="renameTitle">Rename this key?</h2>
+  <p data-i18n="renameHint">The value moves to the new key. The old key is removed.</p>
+  <label class="field"><span data-i18n="newKey">New key</span><input id="rename-to" spellcheck="false" autocomplete="off"></label>
+  <p id="rename-error"></p>
+  <div class="actions">
+    <button id="rename-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="rename-ok" class="btn primary" type="button" data-i18n="renameKey">Rename</button>
+  </div>
+</dialog>
+
+<dialog id="io-confirm">
+  <h2 id="io-title"></h2>
+  <p id="io-hint"></p>
+  <p id="io-error"></p>
+  <div class="actions">
+    <button id="io-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="io-ok" class="btn primary" type="button" data-i18n="writeFile">Write these keys</button>
+  </div>
+</dialog>
+
+<dialog id="cluster-confirm">
+  <h2 id="cluster-confirm-title"></h2>
+  <p id="cluster-confirm-hint"></p>
+  <p id="cluster-confirm-key"></p>
+  <p id="cluster-confirm-error"></p>
+  <div class="actions">
+    <button id="cluster-confirm-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="cluster-confirm-ok" class="btn primary" type="button"></button>
+  </div>
+</dialog>
+
+<dialog id="config-confirm">
+  <h2 data-i18n="configTitle">Change cluster configuration?</h2>
+  <p data-i18n="configHint">Only the fields that differ are written.</p>
+  <p id="config-diff"></p>
+  <p id="config-error"></p>
+  <div class="actions">
+    <button id="config-cancel" class="btn" type="button" data-i18n="cancel">Cancel</button>
+    <button id="config-ok" class="btn primary" type="button" data-i18n="saveConfig">Save configuration</button>
+  </div>
+</dialog>
+
+<script src="/vendor/uplot.min.js"></script>
+<script>
+const $ = (selector) => document.querySelector(selector);
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#i-" + name);
+  svg.append(use);
+  return svg;
+}
+
+async function readJSON(res) {
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && authRequired) showLogin();
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+/* ---------- formatting ---------- */
+function fmtBytes(n) {
+  if (!n) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + " " + units[i];
+}
+function fmtRate(n) {
+  if (!n) return "0";
+  return n < 10 ? n.toFixed(1) : Math.round(n).toLocaleString();
+}
+function fmtMs(n) {
+  if (!n) return "0 ms";
+  return (n < 10 ? n.toFixed(2) : n.toFixed(1)) + " ms";
+}
+function fmtDuration(sec) {
+  if (!sec) return "-";
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (d) return t("durDay", { d, h });
+  if (h) return t("durHour", { h, m });
+  return t("durMin", { m: Math.max(1, m) });
+}
+
+const DICT = {
+  en: {
+    login: "Sign in", logout: "Sign out", loginUser: "Username", loginPassword: "Password",
+    loginHint: "Sign in to open this console.", loginFailed: "The username or password is wrong.",
+    loginEmpty: "Enter a username and password.", loginLocked: "Too many attempts. Wait a moment and try again.",
+    overview: "Overview", data: "Data", config: "Configuration", checking: "Checking",
+    mainNav: "Main", coordinators: "Coordinators", storageServers: "Storage", proxies: "Proxies",
+    clients: "Clients", activeConnections: "Active connections", workload: "Workload",
+    chartStart: "Recording in the background · grain {dur} · scroll to zoom", chartSpan: "Grain {dur} · peak {peak} ops/s · scroll to zoom",
+    clearChart: "Delete values", clearChartAsk: "Delete the recorded reads and writes? Recording starts again from now.",
+    chartLabel: "Reads and writes per second", readOps: "Read ops/s", writeOps: "Write ops/s",
+    clusterInfo: "Cluster", processes: "Processes", address: "Address", className: "Class",
+    roles: "Roles", memory: "Memory", diskFree: "Disk free", uptime: "Uptime", status: "Status",
+    messages: "Messages", directory: "Directory", refresh: "Refresh", search: "Search",
+    searchPlaceholder: "A fragment matches key or value text. Quotes and tuples stay a prefix, for example \"M\"",
+    allKeys: "All keys", key: "Key", value: "Value", type: "Type", size: "Size",
+    noKeys: "No matching keys", detail: "Detail", closeDetail: "Close", pickRow: "Select a row to see its value",
+    copy: "Copy", copied: "Copied", copyFailed: "Copy failed", valueLength: "Length", hex: "Hex",
+    deleteKey: "Delete this key", deleteTitle: "Delete this key?", deleteHint: "Only this one key is removed.",
+    deleteSelected: "Delete selected", selectAll: "Select all",
+    deleteManyTitle: "Delete the {n} selected keys?", deleteManyHint: "Only these {n} keys are removed.",
+    deleteManyMore: "{n} more",
+    createKey: "New key", editValue: "Edit value", renameKey: "Rename", watchKey: "Watch", watching: "Watching",
+    save: "Save", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "Value",
+    renameTitle: "Rename this key?", renameHint: "The value moves to the new key. The old key is removed.", newKey: "New key",
+    exportView: "Export", importView: "Import", backup: "Backup", restore: "Restore",
+    importTitle: "Write {n} keys from this file?", restoreTitle: "Restore {n} keys from this backup?",
+    restoreHint: "Only the keys in the file are written. Nothing else is deleted.",
+    writeFile: "Write these keys", importEmpty: "The file has no keys", importTooMany: "A file can hold at most 2000 keys",
+    clusterConfig: "Cluster configuration", clusterConfigOf: "Configuration for {name}",
+    clusterConfigWait: "Connect to this cluster before changing its redundancy, storage engine, and role counts.",
+    saveConfig: "Save configuration",
+    commitProxies: "Commit proxies", grvProxies: "GRV proxies", logs: "Logs", resolvers: "Resolvers",
+    configNote: "{n} processes. single needs 1, double needs 2, triple needs 3.",
+    configSame: "Nothing changed", configTitle: "Change cluster configuration?",
+    configHint: "Only the fields that differ are written.", configSaved: "Configuration saved",
+    cancel: "Cancel", confirmDelete: "Delete", settings: "Settings", language: "Language", appearance: "Appearance",
+    clusters: "Clusters", clusterAdd: "Add cluster", clusterName: "Name", clusterConn: "Connection string",
+    clusterUse: "Connect", clusterCurrent: "Current", clusterRemove: "Remove", clusterBuiltin: "From the environment",
+    clusterUseTitle: "Connect to this cluster?", clusterUseHint: "The page switches to that cluster. The chart starts recording again.",
+    clusterRemoveTitle: "Remove this cluster?", clusterRemoveHint: "Only this saved connection is removed.",
+    clusterNote: "This panel writes redundancy, the storage engine, and the four role counts. Coordinators, regions, encryption, and tenant mode stay with fdbcli.",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "Light", dark: "Dark",
+    healthy: "Healthy", available: "Available", unavailable: "Unavailable", noData: "No data",
+    quorumOk: "Quorum reachable", quorumBad: "Quorum unreachable",
+    storageSub: "Stored {kv} · disk {disk}", proxySub: "Commit {c} · GRV {g} · log {l}",
+    reads: "Reads", writes: "Writes", txStart: "Transactions started", txCommit: "Transactions committed",
+    readBytes: "Read traffic", writeBytes: "Write traffic", commitLat: "Commit latency", readLat: "Read latency",
+    dataState: "Data state", recovery: "Recovery", serverVersion: "Server version", redundancy: "Redundancy",
+    engine: "Storage engine", dataSize: "Data size", diskUsed: "Disk used", leastFree: "Least free space",
+    partitions: "Shards", faultLabel: "Fault tolerance", fault: "Data {d} · availability {a}", generation: "Generation",
+    locked: "Locked", notLocked: "No", dbLocked: "Database locked", limit: "Rate limit", connection: "Connection",
+    procCount: "{n}", cores: "{n} cores", excluded: "Excluded", degraded: "Degraded", normal: "Normal",
+    noMessages: "No messages. The cluster is running normally.", message: "Message",
+    noCoordinators: "No coordinator information.", reachable: "Reachable", unreachable: "Unreachable",
+    clusterUp: "Cluster available", clusterDown: "Cluster unavailable", version: "Version {v}",
+    statusDetail: "Cluster detail is unavailable. Availability is the only confirmed field.",
+    statusError: "Cannot read cluster status: {err}", keyCount: "{n} keys", emptyKey: "(empty key)",
+    empty: "(empty)", nBytes: "{n} bytes", kindText: "Text", kindBytes: "Bytes",
+    scrollMore: "Scroll down to load more", loading: "Loading", reading: "Reading",
+    scopeSearch: "Search", scopeDir: "Directory", gone: "This key no longer exists",
+    binaryHint: "Binary data. The hex view is below.",
+    lenFull: "{size} ({n} bytes)", lenTrunc: "{size} ({n} bytes, hex truncated)",
+    expand: "Expand {label}", loadMore: "Load more", noChildren: "No children",
+    expandNode: "Expand", collapseNode: "Collapse",
+    durDay: "{d}d {h}h", durHour: "{h}h {m}m", durMin: "{m}m",
+    leInt: "Read as a little-endian integer: {n}",
+    role_storage: "Storage", role_log: "Log", role_commit_proxy: "Commit proxy", role_grv_proxy: "GRV proxy",
+    role_resolver: "Resolver", role_coordinator: "Coordinator", role_cluster_controller: "Cluster controller",
+    role_master: "Master", role_data_distributor: "Data distributor", role_ratekeeper: "Ratekeeper",
+    role_consistency_scan: "Consistency scan", role_blob_manager: "Blob manager", role_blob_worker: "Blob worker",
+    ds_healthy: "Healthy", ds_healthy_repartitioning: "Healthy (repartitioning)", ds_healthy_removing_server: "Healthy (removing server)",
+    ds_healing: "Healing", ds_initializing: "Initializing", ds_missing_data: "Missing data",
+    lim_workload: "Not limited. The workload is not saturating the database",
+    rec_fully_recovered: "Fully recovered", rec_accepting_commits: "Accepting commits", rec_all_logs_recruited: "Logs recruited",
+    rec_writing_coordinated_state: "Writing coordinated state", rec_recruiting_transaction_servers: "Recruiting transaction servers"
+  },
+  zh: {
+    login: "登录", logout: "退出", loginUser: "用户名", loginPassword: "密码",
+    loginHint: "登录后才能进入控制台。", loginFailed: "用户名或密码不正确。",
+    loginEmpty: "请填写用户名和密码。", loginLocked: "尝试次数过多，请稍后再试。",
+    overview: "概览", data: "数据浏览", config: "集群配置", checking: "正在检查",
+    mainNav: "主导航", coordinators: "协调者", storageServers: "存储服务", proxies: "代理",
+    clients: "客户端连接", activeConnections: "当前活动连接", workload: "读写负载",
+    chartStart: "后台采集中 · 时间颗粒 {dur} · 滚动缩放", chartSpan: "时间颗粒 {dur} · 峰值 {peak} ops/s · 滚动缩放",
+    clearChart: "删除数值", clearChartAsk: "删除图表上已记录的读写数值？之后从现在重新记录。",
+    chartLabel: "读写操作每秒趋势", readOps: "读 ops/s", writeOps: "写 ops/s",
+    clusterInfo: "集群信息", processes: "进程", address: "地址", className: "类型",
+    roles: "角色", memory: "内存", diskFree: "磁盘剩余", uptime: "运行时间", status: "状态",
+    messages: "集群消息", directory: "目录", refresh: "刷新", search: "搜索",
+    searchPlaceholder: "一段文字会匹配键或值。引号和 tuple 仍按前缀，例如 \"M\"",
+    allKeys: "全部键", key: "键", value: "值", type: "类型", size: "大小",
+    noKeys: "没有匹配的键", detail: "详情", closeDetail: "关闭", pickRow: "点一行查看完整内容",
+    copy: "复制", copied: "已复制", copyFailed: "复制失败", valueLength: "值长度", hex: "十六进制",
+    deleteKey: "删除这个键", deleteTitle: "删除这个键？", deleteHint: "只会删除这一条。",
+    deleteSelected: "全部删除", selectAll: "全选",
+    deleteManyTitle: "删除选中的 {n} 条？", deleteManyHint: "只会删除这 {n} 条。",
+    deleteManyMore: "还有 {n} 条",
+    createKey: "新建键", editValue: "修改值", renameKey: "重命名", watchKey: "盯住", watching: "正在盯住",
+    save: "保存", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "值",
+    renameTitle: "重命名这个键？", renameHint: "值会写到新键上，旧键会被删掉。", newKey: "新键",
+    exportView: "导出", importView: "导入", backup: "备份", restore: "恢复",
+    importTitle: "写入文件里的 {n} 条？", restoreTitle: "从这份备份恢复 {n} 条？",
+    restoreHint: "只会写入文件里的键，不会按范围删除其他键。",
+    writeFile: "写入这些键", importEmpty: "文件里没有键", importTooMany: "一次最多 2000 条",
+    clusterConfig: "集群配置", clusterConfigOf: "{name} 的配置",
+    clusterConfigWait: "先连接到这个集群，才能修改它的冗余模式、存储引擎和角色数量。",
+    saveConfig: "保存配置",
+    commitProxies: "提交代理", grvProxies: "GRV 代理", logs: "日志", resolvers: "冲突检测",
+    configNote: "当前 {n} 个进程。single 需要 1 个，double 需要 2 个，triple 需要 3 个。",
+    configSame: "没有变化", configTitle: "修改集群配置？",
+    configHint: "只会写入有变化的项。", configSaved: "配置已保存",
+    cancel: "取消", confirmDelete: "确认删除", settings: "设置", language: "语言", appearance: "外观",
+    clusters: "集群", clusterAdd: "添加集群", clusterName: "名称", clusterConn: "连接串",
+    clusterUse: "连接", clusterCurrent: "当前", clusterRemove: "移除", clusterBuiltin: "启动时的连接",
+    clusterUseTitle: "连接到这个集群？", clusterUseHint: "页面会改看这个集群。图表从现在重新记录。",
+    clusterRemoveTitle: "移除这个集群？", clusterRemoveHint: "只删掉保存的连接。",
+    clusterNote: "这里写入冗余模式、存储引擎和四类角色数量。协调者、区域、加密和租户模式仍用 fdbcli。",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "浅色", dark: "深色",
+    healthy: "集群健康", available: "可用", unavailable: "不可用", noData: "无数据",
+    quorumOk: "仲裁可达", quorumBad: "仲裁不可达",
+    storageSub: "存储 {kv} · 占用 {disk}", proxySub: "提交 {c} · GRV {g} · 日志 {l}",
+    reads: "读", writes: "写", txStart: "事务启动", txCommit: "事务提交",
+    readBytes: "读取流量", writeBytes: "写入流量", commitLat: "提交延迟", readLat: "读延迟",
+    dataState: "数据状态", recovery: "恢复状态", serverVersion: "服务端版本", redundancy: "冗余模式",
+    engine: "存储引擎", dataSize: "数据大小", diskUsed: "磁盘占用", leastFree: "最小剩余空间",
+    partitions: "分片数", faultLabel: "可容忍故障域", fault: "数据 {d} · 可用性 {a}", generation: "恢复世代",
+    locked: "已锁定", notLocked: "否", dbLocked: "数据库锁定", limit: "性能限制", connection: "连接",
+    procCount: "{n} 个", cores: "{n} 核", excluded: "已排除", degraded: "性能下降", normal: "正常",
+    noMessages: "没有消息，集群运行正常。", message: "消息",
+    noCoordinators: "没有协调者信息。", reachable: "可达", unreachable: "不可达",
+    clusterUp: "集群可用", clusterDown: "集群不可用", version: "版本 {v}",
+    statusDetail: "拿不到集群状态详情，只能确认可用性。",
+    statusError: "无法读取集群状态：{err}", keyCount: "{n} 个键", emptyKey: "(空键)",
+    empty: "(空)", nBytes: "{n} 字节", kindText: "文本", kindBytes: "二进制",
+    scrollMore: "继续向下滚动加载更多", loading: "加载中", reading: "读取中",
+    scopeSearch: "搜索", scopeDir: "目录", gone: "这个键已经不存在",
+    binaryHint: "二进制数据，无法按文本读取。下面是十六进制。",
+    lenFull: "{size}（{n} 字节）", lenTrunc: "{size}（{n} 字节，十六进制已截断）",
+    expand: "展开 {label}", loadMore: "加载更多", noChildren: "没有子项",
+    expandNode: "展开", collapseNode: "收起",
+    durDay: "{d} 天 {h} 小时", durHour: "{h} 小时 {m} 分", durMin: "{m} 分钟",
+    leInt: "按小端整数读取：{n}",
+    role_storage: "存储", role_log: "日志", role_commit_proxy: "提交代理", role_grv_proxy: "GRV 代理",
+    role_resolver: "冲突检测", role_coordinator: "协调者", role_cluster_controller: "控制器",
+    role_master: "Master", role_data_distributor: "数据分发", role_ratekeeper: "限流",
+    role_consistency_scan: "一致性扫描", role_blob_manager: "Blob 管理", role_blob_worker: "Blob Worker",
+    ds_healthy: "健康", ds_healthy_repartitioning: "健康（重新分片）", ds_healthy_removing_server: "健康（移除节点）",
+    ds_healing: "修复中", ds_initializing: "初始化中", ds_missing_data: "数据缺失",
+    lim_workload: "未受限，负载没有打满数据库",
+    rec_fully_recovered: "已完全恢复", rec_accepting_commits: "接受提交", rec_all_logs_recruited: "日志已就绪",
+    rec_writing_coordinated_state: "写入协调状态", rec_recruiting_transaction_servers: "正在招募事务服务"
+  },
+  "zh-Hant": {
+    login: "登入", logout: "登出", loginUser: "使用者名稱", loginPassword: "密碼",
+    loginHint: "登入後才能進入主控台。", loginFailed: "使用者名稱或密碼不正確。",
+    loginEmpty: "請填寫使用者名稱和密碼。", loginLocked: "嘗試次數過多，請稍後再試。",
+    overview: "概覽", data: "資料瀏覽", config: "叢集設定", checking: "正在檢查",
+    mainNav: "主導覽", coordinators: "協調者", storageServers: "儲存服務", proxies: "代理",
+    clients: "用戶端連線", activeConnections: "目前活動連線", workload: "讀寫負載",
+    chartStart: "背景採集中 · 時間顆粒 {dur} · 捲動縮放", chartSpan: "時間顆粒 {dur} · 峰值 {peak} ops/s · 捲動縮放",
+    clearChart: "刪除數值", clearChartAsk: "刪除圖表上已記錄的讀寫數值？之後從現在重新記錄。",
+    chartLabel: "讀寫操作每秒趨勢", readOps: "讀 ops/s", writeOps: "寫 ops/s",
+    clusterInfo: "叢集資訊", processes: "處理程序", address: "位址", className: "類型",
+    roles: "角色", memory: "記憶體", diskFree: "磁碟剩餘", uptime: "執行時間", status: "狀態",
+    messages: "叢集訊息", directory: "目錄", refresh: "重新整理", search: "搜尋",
+    searchPlaceholder: "一段文字會符合鍵或值。引號和 tuple 仍按前綴，例如 \"M\"",
+    allKeys: "全部鍵", key: "鍵", value: "值", type: "類型", size: "大小",
+    noKeys: "沒有符合的鍵", detail: "詳細資料", closeDetail: "關閉", pickRow: "點一行查看完整內容",
+    copy: "複製", copied: "已複製", copyFailed: "複製失敗", valueLength: "值長度", hex: "十六進位",
+    deleteKey: "刪除這個鍵", deleteTitle: "刪除這個鍵？", deleteHint: "只會刪除這一條。",
+    deleteSelected: "全部刪除", selectAll: "全選",
+    deleteManyTitle: "刪除選取的 {n} 條？", deleteManyHint: "只會刪除這 {n} 條。",
+    deleteManyMore: "還有 {n} 條",
+    createKey: "新增鍵", editValue: "修改值", renameKey: "重新命名", watchKey: "盯住", watching: "正在盯住",
+    save: "儲存", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "值",
+    renameTitle: "重新命名這個鍵？", renameHint: "值會寫到新鍵上，舊鍵會被刪掉。", newKey: "新鍵",
+    exportView: "匯出", importView: "匯入", backup: "備份", restore: "還原",
+    importTitle: "寫入檔案裡的 {n} 條？", restoreTitle: "從這份備份還原 {n} 條？",
+    restoreHint: "只會寫入檔案裡的鍵，不會按範圍刪除其他鍵。",
+    writeFile: "寫入這些鍵", importEmpty: "檔案裡沒有鍵", importTooMany: "一次最多 2000 條",
+    clusterConfig: "叢集設定", clusterConfigOf: "{name} 的設定",
+    clusterConfigWait: "先連線到這個叢集，才能修改它的冗餘模式、儲存引擎和角色數量。",
+    saveConfig: "儲存設定",
+    commitProxies: "提交代理", grvProxies: "GRV 代理", logs: "日誌", resolvers: "衝突檢測",
+    configNote: "目前 {n} 個處理程序。single 需要 1 個，double 需要 2 個，triple 需要 3 個。",
+    configSame: "沒有變化", configTitle: "修改叢集設定？",
+    configHint: "只會寫入有變化的項目。", configSaved: "設定已儲存",
+    cancel: "取消", confirmDelete: "確認刪除", settings: "設定", language: "語言", appearance: "外觀",
+    clusters: "叢集", clusterAdd: "新增叢集", clusterName: "名稱", clusterConn: "連線字串",
+    clusterUse: "連線", clusterCurrent: "目前", clusterRemove: "移除", clusterBuiltin: "啟動時的連線",
+    clusterUseTitle: "連線到這個叢集？", clusterUseHint: "頁面會改看這個叢集。圖表從現在重新記錄。",
+    clusterRemoveTitle: "移除這個叢集？", clusterRemoveHint: "只刪掉保存的連線。",
+    clusterNote: "這裡寫入冗餘模式、儲存引擎和四類角色數量。協調者、區域、加密和租戶模式仍用 fdbcli。",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "淺色", dark: "深色",
+    healthy: "叢集健康", available: "可用", unavailable: "不可用", noData: "無資料",
+    quorumOk: "仲裁可達", quorumBad: "仲裁不可達",
+    storageSub: "儲存 {kv} · 佔用 {disk}", proxySub: "提交 {c} · GRV {g} · 日誌 {l}",
+    reads: "讀", writes: "寫", txStart: "交易啟動", txCommit: "交易提交",
+    readBytes: "讀取流量", writeBytes: "寫入流量", commitLat: "提交延遲", readLat: "讀延遲",
+    dataState: "資料狀態", recovery: "復原狀態", serverVersion: "伺服器版本", redundancy: "冗餘模式",
+    engine: "儲存引擎", dataSize: "資料大小", diskUsed: "磁碟佔用", leastFree: "最小剩餘空間",
+    partitions: "分片數", faultLabel: "可容忍故障域", fault: "資料 {d} · 可用性 {a}", generation: "復原世代",
+    locked: "已鎖定", notLocked: "否", dbLocked: "資料庫鎖定", limit: "效能限制", connection: "連線",
+    procCount: "{n} 個", cores: "{n} 核", excluded: "已排除", degraded: "效能下降", normal: "正常",
+    noMessages: "沒有訊息，叢集執行正常。", message: "訊息",
+    noCoordinators: "沒有協調者資訊。", reachable: "可達", unreachable: "不可達",
+    clusterUp: "叢集可用", clusterDown: "叢集不可用", version: "版本 {v}",
+    statusDetail: "拿不到叢集狀態詳情，只能確認可用性。",
+    statusError: "無法讀取叢集狀態：{err}", keyCount: "{n} 個鍵", emptyKey: "(空鍵)",
+    empty: "(空)", nBytes: "{n} 位元組", kindText: "文字", kindBytes: "二進位",
+    scrollMore: "繼續向下捲動載入更多", loading: "載入中", reading: "讀取中",
+    scopeSearch: "搜尋", scopeDir: "目錄", gone: "這個鍵已經不存在",
+    binaryHint: "二進位資料，無法按文字讀取。下面是十六進位。",
+    lenFull: "{size}（{n} 位元組）", lenTrunc: "{size}（{n} 位元組，十六進位已截斷）",
+    expand: "展開 {label}", loadMore: "載入更多", noChildren: "沒有子項",
+    expandNode: "展開", collapseNode: "收起",
+    durDay: "{d} 天 {h} 小時", durHour: "{h} 小時 {m} 分", durMin: "{m} 分鐘",
+    leInt: "按小端整數讀取：{n}",
+    role_storage: "儲存", role_log: "日誌", role_commit_proxy: "提交代理", role_grv_proxy: "GRV 代理",
+    role_resolver: "衝突檢測", role_coordinator: "協調者", role_cluster_controller: "控制器",
+    role_master: "Master", role_data_distributor: "資料分發", role_ratekeeper: "限流",
+    role_consistency_scan: "一致性掃描", role_blob_manager: "Blob 管理", role_blob_worker: "Blob Worker",
+    ds_healthy: "健康", ds_healthy_repartitioning: "健康（重新分片）", ds_healthy_removing_server: "健康（移除節點）",
+    ds_healing: "修復中", ds_initializing: "初始化中", ds_missing_data: "資料缺失",
+    lim_workload: "未受限，負載沒有打滿資料庫",
+    rec_fully_recovered: "已完全復原", rec_accepting_commits: "接受提交", rec_all_logs_recruited: "日誌已就緒",
+    rec_writing_coordinated_state: "寫入協調狀態", rec_recruiting_transaction_servers: "正在招募交易服務"
+  },
+  ru: {
+    login: "Войти", logout: "Выйти", loginUser: "Имя пользователя", loginPassword: "Пароль",
+    loginHint: "Войдите, чтобы открыть консоль.", loginFailed: "Неверное имя пользователя или пароль.",
+    loginEmpty: "Введите имя пользователя и пароль.", loginLocked: "Слишком много попыток. Подождите и попробуйте снова.",
+    overview: "Обзор", data: "Данные", config: "Конфигурация", checking: "Проверка",
+    mainNav: "Навигация", coordinators: "Координаторы", storageServers: "Хранилище", proxies: "Прокси",
+    clients: "Клиенты", activeConnections: "Активные подключения", workload: "Нагрузка",
+    chartStart: "Запись в фоне · шаг {dur} · прокрутка меняет масштаб", chartSpan: "Шаг {dur} · пик {peak} ops/s · прокрутка меняет масштаб",
+    clearChart: "Удалить значения", clearChartAsk: "Удалить записанные чтения и записи? Запись начнётся заново.",
+    chartLabel: "Чтения и записи в секунду", readOps: "Чтение, ops/s", writeOps: "Запись, ops/s",
+    clusterInfo: "Кластер", processes: "Процессы", address: "Адрес", className: "Класс",
+    roles: "Роли", memory: "Память", diskFree: "Свободно на диске", uptime: "Время работы", status: "Состояние",
+    messages: "Сообщения", directory: "Каталог", refresh: "Обновить", search: "Поиск",
+    searchPlaceholder: "Фрагмент ищется в тексте ключа или значения. Кавычки и кортежи остаются префиксом, например \"M\"",
+    allKeys: "Все ключи", key: "Ключ", value: "Значение", type: "Тип", size: "Размер",
+    noKeys: "Нет подходящих ключей", detail: "Подробности", closeDetail: "Закрыть", pickRow: "Выберите строку, чтобы увидеть значение",
+    copy: "Копировать", copied: "Скопировано", copyFailed: "Не удалось скопировать", valueLength: "Длина", hex: "Hex",
+    deleteKey: "Удалить этот ключ", deleteTitle: "Удалить этот ключ?", deleteHint: "Будет удалён только этот ключ.",
+    deleteSelected: "Удалить выбранные", selectAll: "Выбрать все",
+    deleteManyTitle: "Удалить выбранные ключи ({n})?", deleteManyHint: "Будут удалены только эти {n} ключей.",
+    deleteManyMore: "Ещё {n}",
+    createKey: "Новый ключ", editValue: "Изменить значение", renameKey: "Переименовать", watchKey: "Следить", watching: "Слежение",
+    save: "Сохранить", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "Значение",
+    renameTitle: "Переименовать этот ключ?", renameHint: "Значение переносится на новый ключ. Старый ключ удаляется.", newKey: "Новый ключ",
+    exportView: "Экспорт", importView: "Импорт", backup: "Резервная копия", restore: "Восстановить",
+    importTitle: "Записать {n} ключей из файла?", restoreTitle: "Восстановить {n} ключей из этой копии?",
+    restoreHint: "Записываются только ключи из файла. Остальные ключи не удаляются.",
+    writeFile: "Записать эти ключи", importEmpty: "В файле нет ключей", importTooMany: "В файле не больше 2000 ключей",
+    clusterConfig: "Конфигурация кластера", clusterConfigOf: "Конфигурация {name}",
+    clusterConfigWait: "Сначала подключитесь к этому кластеру, чтобы менять избыточность, движок хранения и число ролей.",
+    saveConfig: "Сохранить",
+    commitProxies: "Прокси фиксации", grvProxies: "Прокси GRV", logs: "Журналы", resolvers: "Разрешение конфликтов",
+    configNote: "Процессов: {n}. single — 1, double — 2, triple — 3.",
+    configSame: "Без изменений", configTitle: "Изменить конфигурацию кластера?",
+    configHint: "Записываются только изменившиеся поля.", configSaved: "Конфигурация сохранена",
+    cancel: "Отмена", confirmDelete: "Удалить", settings: "Настройки", language: "Язык", appearance: "Оформление",
+    clusters: "Кластеры", clusterAdd: "Добавить кластер", clusterName: "Имя", clusterConn: "Строка подключения",
+    clusterUse: "Подключить", clusterCurrent: "Текущий", clusterRemove: "Удалить", clusterBuiltin: "Из окружения",
+    clusterUseTitle: "Подключиться к этому кластеру?", clusterUseHint: "Страница переключится на него. График начнёт запись заново.",
+    clusterRemoveTitle: "Удалить этот кластер?", clusterRemoveHint: "Удаляется только сохранённое подключение.",
+    clusterNote: "Здесь записываются избыточность, движок хранения и четыре счётчика ролей. Координаторы, регионы, шифрование и режим арендаторов остаются в fdbcli.",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "Светлая", dark: "Тёмная",
+    healthy: "Кластер исправен", available: "Доступен", unavailable: "Недоступен", noData: "Нет данных",
+    quorumOk: "Кворум доступен", quorumBad: "Кворум недоступен",
+    storageSub: "Хранится {kv} · диск {disk}", proxySub: "Фиксация {c} · GRV {g} · журнал {l}",
+    reads: "Чтение", writes: "Запись", txStart: "Начато транзакций", txCommit: "Зафиксировано",
+    readBytes: "Трафик чтения", writeBytes: "Трафик записи", commitLat: "Задержка фиксации", readLat: "Задержка чтения",
+    dataState: "Состояние данных", recovery: "Восстановление", serverVersion: "Версия сервера", redundancy: "Избыточность",
+    engine: "Движок хранения", dataSize: "Размер данных", diskUsed: "Занято на диске", leastFree: "Минимум свободного места",
+    partitions: "Сегменты", faultLabel: "Допустимые отказы", fault: "Данные {d} · доступность {a}", generation: "Поколение",
+    locked: "Заблокирована", notLocked: "Нет", dbLocked: "База заблокирована", limit: "Ограничение", connection: "Подключение",
+    procCount: "{n}", cores: "{n} ядер", excluded: "Исключён", degraded: "Снижена производительность", normal: "Норма",
+    noMessages: "Сообщений нет. Кластер работает нормально.", message: "Сообщение",
+    noCoordinators: "Нет сведений о координаторах.", reachable: "Доступен", unreachable: "Недоступен",
+    clusterUp: "Кластер доступен", clusterDown: "Кластер недоступен", version: "Версия {v}",
+    statusDetail: "Подробности недоступны. Подтверждена только доступность.",
+    statusError: "Не удалось прочитать состояние: {err}", keyCount: "{n} ключей", emptyKey: "(пустой ключ)",
+    empty: "(пусто)", nBytes: "{n} байт", kindText: "Текст", kindBytes: "Байты",
+    scrollMore: "Прокрутите вниз, чтобы загрузить ещё", loading: "Загрузка", reading: "Чтение",
+    scopeSearch: "Поиск", scopeDir: "Каталог", gone: "Этого ключа больше нет",
+    binaryHint: "Двоичные данные. Ниже шестнадцатеричный вид.",
+    lenFull: "{size} ({n} байт)", lenTrunc: "{size} ({n} байт, hex обрезан)",
+    expand: "Развернуть {label}", loadMore: "Загрузить ещё", noChildren: "Нет вложенных элементов",
+    expandNode: "Развернуть", collapseNode: "Свернуть",
+    durDay: "{d} д {h} ч", durHour: "{h} ч {m} мин", durMin: "{m} мин",
+    leInt: "Прочитано как целое little-endian: {n}",
+    role_storage: "Хранилище", role_log: "Журнал", role_commit_proxy: "Прокси фиксации", role_grv_proxy: "Прокси GRV",
+    role_resolver: "Разрешение конфликтов", role_coordinator: "Координатор", role_cluster_controller: "Контроллер",
+    role_master: "Master", role_data_distributor: "Распределение данных", role_ratekeeper: "Ограничение",
+    role_consistency_scan: "Проверка согласованности", role_blob_manager: "Управление Blob", role_blob_worker: "Blob Worker",
+    ds_healthy: "Исправно", ds_healthy_repartitioning: "Исправно (переразбиение)", ds_healthy_removing_server: "Исправно (удаление узла)",
+    ds_healing: "Восстановление", ds_initializing: "Инициализация", ds_missing_data: "Данные отсутствуют",
+    lim_workload: "Без ограничения. Нагрузка не насыщает базу",
+    rec_fully_recovered: "Восстановление завершено", rec_accepting_commits: "Принимает фиксации", rec_all_logs_recruited: "Журналы готовы",
+    rec_writing_coordinated_state: "Запись согласованного состояния", rec_recruiting_transaction_servers: "Набор серверов транзакций"
+  },
+  ja: {
+    login: "ログイン", logout: "ログアウト", loginUser: "ユーザー名", loginPassword: "パスワード",
+    loginHint: "ログインするとコンソールを開けます。", loginFailed: "ユーザー名またはパスワードが違います。",
+    loginEmpty: "ユーザー名とパスワードを入力してください。", loginLocked: "試行が多すぎます。しばらくしてからもう一度。",
+    overview: "概要", data: "データ", config: "構成", checking: "確認中",
+    mainNav: "メイン", coordinators: "コーディネーター", storageServers: "ストレージ", proxies: "プロキシ",
+    clients: "クライアント", activeConnections: "アクティブな接続", workload: "読み書き負荷",
+    chartStart: "バックグラウンドで記録中 · 間隔 {dur} · スクロールで拡大", chartSpan: "間隔 {dur} · ピーク {peak} ops/s · スクロールで拡大",
+    clearChart: "値を削除", clearChartAsk: "記録した読み書きの値を削除しますか？記録は今からやり直します。",
+    chartLabel: "1秒あたりの読み書き", readOps: "読み取り ops/s", writeOps: "書き込み ops/s",
+    clusterInfo: "クラスタ", processes: "プロセス", address: "アドレス", className: "クラス",
+    roles: "ロール", memory: "メモリ", diskFree: "ディスク空き", uptime: "稼働時間", status: "状態",
+    messages: "メッセージ", directory: "ディレクトリ", refresh: "更新", search: "検索",
+    searchPlaceholder: "断片はキーまたは値の文字に一致します。引用符とタプルはプレフィックスのままです。例 \"M\"",
+    allKeys: "すべてのキー", key: "キー", value: "値", type: "種類", size: "サイズ",
+    noKeys: "一致するキーがありません", detail: "詳細", closeDetail: "閉じる", pickRow: "行を選ぶと値を表示します",
+    copy: "コピー", copied: "コピーしました", copyFailed: "コピーに失敗しました", valueLength: "長さ", hex: "16進",
+    deleteKey: "このキーを削除", deleteTitle: "このキーを削除しますか？", deleteHint: "このキーだけを削除します。",
+    deleteSelected: "選択を削除", selectAll: "すべて選択",
+    deleteManyTitle: "選択した {n} 件を削除しますか？", deleteManyHint: "この {n} 件だけを削除します。",
+    deleteManyMore: "ほか {n} 件",
+    createKey: "新しいキー", editValue: "値を編集", renameKey: "名前を変更", watchKey: "監視", watching: "監視中",
+    save: "保存", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "値",
+    renameTitle: "このキーの名前を変更しますか？", renameHint: "値は新しいキーに移り、古いキーは削除されます。", newKey: "新しいキー",
+    exportView: "エクスポート", importView: "インポート", backup: "バックアップ", restore: "復元",
+    importTitle: "ファイルの {n} 件を書き込みますか？", restoreTitle: "このバックアップから {n} 件を復元しますか？",
+    restoreHint: "ファイルにあるキーだけを書き込みます。範囲削除はしません。",
+    writeFile: "これらのキーを書き込む", importEmpty: "ファイルにキーがありません", importTooMany: "一度に最大 2000 件です",
+    clusterConfig: "クラスタ構成", clusterConfigOf: "{name} の構成",
+    clusterConfigWait: "このクラスタに接続してから、冗長性、ストレージエンジン、ロール数を変更できます。",
+    saveConfig: "構成を保存",
+    commitProxies: "コミットプロキシ", grvProxies: "GRV プロキシ", logs: "ログ", resolvers: "競合解決",
+    configNote: "プロセス {n} 個。single は 1、double は 2、triple は 3 必要です。",
+    configSame: "変更はありません", configTitle: "クラスタ構成を変更しますか？",
+    configHint: "変わった項目だけを書き込みます。", configSaved: "構成を保存しました",
+    cancel: "キャンセル", confirmDelete: "削除する", settings: "設定", language: "言語", appearance: "外観",
+    clusters: "クラスタ", clusterAdd: "クラスタを追加", clusterName: "名前", clusterConn: "接続文字列",
+    clusterUse: "接続", clusterCurrent: "現在", clusterRemove: "削除", clusterBuiltin: "起動時の接続",
+    clusterUseTitle: "このクラスタに接続しますか？", clusterUseHint: "ページはこのクラスタを表示します。グラフは今から記録し直します。",
+    clusterRemoveTitle: "このクラスタを削除しますか？", clusterRemoveHint: "保存した接続だけを削除します。",
+    clusterNote: "ここでは冗長性、ストレージエンジン、4 種類のロール数を書き込みます。コーディネーター、リージョン、暗号化、テナントは fdbcli のままです。",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "ライト", dark: "ダーク",
+    healthy: "正常", available: "利用可能", unavailable: "利用不可", noData: "データなし",
+    quorumOk: "クォーラム到達可能", quorumBad: "クォーラム到達不可",
+    storageSub: "保存 {kv} · ディスク {disk}", proxySub: "コミット {c} · GRV {g} · ログ {l}",
+    reads: "読み取り", writes: "書き込み", txStart: "開始したトランザクション", txCommit: "コミット",
+    readBytes: "読み取り量", writeBytes: "書き込み量", commitLat: "コミット遅延", readLat: "読み取り遅延",
+    dataState: "データの状態", recovery: "回復", serverVersion: "サーバー版", redundancy: "冗長性",
+    engine: "ストレージエンジン", dataSize: "データサイズ", diskUsed: "ディスク使用量", leastFree: "最小空き容量",
+    partitions: "シャード", faultLabel: "許容できる障害", fault: "データ {d} · 可用性 {a}", generation: "世代",
+    locked: "ロック中", notLocked: "いいえ", dbLocked: "データベースはロック中", limit: "速度制限", connection: "接続",
+    procCount: "{n}", cores: "{n} コア", excluded: "除外", degraded: "性能低下", normal: "正常",
+    noMessages: "メッセージはありません。クラスタは正常です。", message: "メッセージ",
+    noCoordinators: "コーディネーター情報がありません。", reachable: "到達可能", unreachable: "到達不可",
+    clusterUp: "クラスタは利用可能", clusterDown: "クラスタは利用不可", version: "バージョン {v}",
+    statusDetail: "詳細を取得できません。確認できるのは可用性だけです。",
+    statusError: "状態を読めません: {err}", keyCount: "{n} 件", emptyKey: "(空のキー)",
+    empty: "(空)", nBytes: "{n} バイト", kindText: "テキスト", kindBytes: "バイナリ",
+    scrollMore: "下へスクロールして続きを読み込む", loading: "読み込み中", reading: "取得中",
+    scopeSearch: "検索", scopeDir: "ディレクトリ", gone: "このキーはもうありません",
+    binaryHint: "バイナリデータです。下に16進表示があります。",
+    lenFull: "{size}（{n} バイト）", lenTrunc: "{size}（{n} バイト、16進は切り詰め）",
+    expand: "{label} を展開", loadMore: "さらに読み込む", noChildren: "子はありません",
+    expandNode: "展開", collapseNode: "折りたたむ",
+    durDay: "{d}日 {h}時間", durHour: "{h}時間 {m}分", durMin: "{m}分",
+    leInt: "リトルエンディアン整数として読取: {n}",
+    role_storage: "ストレージ", role_log: "ログ", role_commit_proxy: "コミットプロキシ", role_grv_proxy: "GRV プロキシ",
+    role_resolver: "競合解決", role_coordinator: "コーディネーター", role_cluster_controller: "コントローラ",
+    role_master: "Master", role_data_distributor: "データ分散", role_ratekeeper: "制限",
+    role_consistency_scan: "整合性スキャン", role_blob_manager: "Blob 管理", role_blob_worker: "Blob Worker",
+    ds_healthy: "正常", ds_healthy_repartitioning: "正常（再分割）", ds_healthy_removing_server: "正常（サーバー除去）",
+    ds_healing: "修復中", ds_initializing: "初期化中", ds_missing_data: "データ欠損",
+    lim_workload: "制限なし。負荷はデータベースを飽和させていません",
+    rec_fully_recovered: "回復完了", rec_accepting_commits: "コミット受付中", rec_all_logs_recruited: "ログ準備完了",
+    rec_writing_coordinated_state: "協調状態を書き込み中", rec_recruiting_transaction_servers: "トランザクションサーバーを募集中"
+  },
+  de: {
+    login: "Anmelden", logout: "Abmelden", loginUser: "Benutzername", loginPassword: "Passwort",
+    loginHint: "Melden Sie sich an, um die Konsole zu öffnen.", loginFailed: "Benutzername oder Passwort ist falsch.",
+    loginEmpty: "Benutzername und Passwort ausfüllen.", loginLocked: "Zu viele Versuche. Kurz warten und erneut versuchen.",
+    overview: "Übersicht", data: "Daten", config: "Konfiguration", checking: "Prüfung",
+    mainNav: "Navigation", coordinators: "Koordinatoren", storageServers: "Speicher", proxies: "Proxys",
+    clients: "Clients", activeConnections: "Aktive Verbindungen", workload: "Last",
+    chartStart: "Aufzeichnung im Hintergrund · Raster {dur} · Scrollen zoomt", chartSpan: "Raster {dur} · Spitze {peak} ops/s · Scrollen zoomt",
+    clearChart: "Werte löschen", clearChartAsk: "Die aufgezeichneten Lese- und Schreibwerte löschen? Die Aufzeichnung beginnt neu.",
+    chartLabel: "Lese- und Schreibvorgänge pro Sekunde", readOps: "Lesen ops/s", writeOps: "Schreiben ops/s",
+    clusterInfo: "Cluster", processes: "Prozesse", address: "Adresse", className: "Klasse",
+    roles: "Rollen", memory: "Speicher", diskFree: "Festplatte frei", uptime: "Laufzeit", status: "Status",
+    messages: "Meldungen", directory: "Verzeichnis", refresh: "Aktualisieren", search: "Suchen",
+    searchPlaceholder: "Ein Textstück trifft Schlüssel oder Wert. Anführungen und Tupel bleiben ein Präfix, zum Beispiel \"M\"",
+    allKeys: "Alle Schlüssel", key: "Schlüssel", value: "Wert", type: "Typ", size: "Größe",
+    noKeys: "Keine passenden Schlüssel", detail: "Detail", closeDetail: "Schließen", pickRow: "Eine Zeile wählen, um den Wert zu sehen",
+    copy: "Kopieren", copied: "Kopiert", copyFailed: "Kopieren fehlgeschlagen", valueLength: "Länge", hex: "Hex",
+    deleteKey: "Diesen Schlüssel löschen", deleteTitle: "Diesen Schlüssel löschen?", deleteHint: "Nur dieser eine Schlüssel wird entfernt.",
+    deleteSelected: "Auswahl löschen", selectAll: "Alle auswählen",
+    deleteManyTitle: "Die {n} ausgewählten Schlüssel löschen?", deleteManyHint: "Nur diese {n} Schlüssel werden entfernt.",
+    deleteManyMore: "{n} weitere",
+    createKey: "Neuer Schlüssel", editValue: "Wert ändern", renameKey: "Umbenennen", watchKey: "Beobachten", watching: "Beobachtet",
+    save: "Speichern", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "Wert",
+    renameTitle: "Diesen Schlüssel umbenennen?", renameHint: "Der Wert zieht auf den neuen Schlüssel um. Der alte Schlüssel wird gelöscht.", newKey: "Neuer Schlüssel",
+    exportView: "Export", importView: "Import", backup: "Sicherung", restore: "Wiederherstellen",
+    importTitle: "{n} Schlüssel aus dieser Datei schreiben?", restoreTitle: "{n} Schlüssel aus dieser Sicherung wiederherstellen?",
+    restoreHint: "Es werden nur Schlüssel aus der Datei geschrieben. Nichts anderes wird gelöscht.",
+    writeFile: "Diese Schlüssel schreiben", importEmpty: "Die Datei enthält keine Schlüssel", importTooMany: "Eine Datei fasst höchstens 2000 Schlüssel",
+    clusterConfig: "Clusterkonfiguration", clusterConfigOf: "Konfiguration von {name}",
+    clusterConfigWait: "Verbinden Sie sich zuerst mit diesem Cluster, um Redundanz, Speicher-Engine und Rollenanzahl zu ändern.",
+    saveConfig: "Konfiguration speichern",
+    commitProxies: "Commit-Proxys", grvProxies: "GRV-Proxys", logs: "Protokolle", resolvers: "Konfliktprüfung",
+    configNote: "{n} Prozesse. single braucht 1, double 2, triple 3.",
+    configSame: "Nichts geändert", configTitle: "Clusterkonfiguration ändern?",
+    configHint: "Nur geänderte Felder werden geschrieben.", configSaved: "Konfiguration gespeichert",
+    cancel: "Abbrechen", confirmDelete: "Löschen", settings: "Einstellungen", language: "Sprache", appearance: "Darstellung",
+    clusters: "Cluster", clusterAdd: "Cluster hinzufügen", clusterName: "Name", clusterConn: "Verbindungszeichenfolge",
+    clusterUse: "Verbinden", clusterCurrent: "Aktiv", clusterRemove: "Entfernen", clusterBuiltin: "Aus der Umgebung",
+    clusterUseTitle: "Mit diesem Cluster verbinden?", clusterUseHint: "Die Seite wechselt dorthin. Die Aufzeichnung beginnt neu.",
+    clusterRemoveTitle: "Diesen Cluster entfernen?", clusterRemoveHint: "Nur die gespeicherte Verbindung wird entfernt.",
+    clusterNote: "Hier werden Redundanz, Speicher-Engine und die vier Rollenanzahlen geschrieben. Koordinatoren, Regionen, Verschlüsselung und Mandanten bleiben bei fdbcli.",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "Hell", dark: "Dunkel",
+    healthy: "Cluster gesund", available: "Verfügbar", unavailable: "Nicht verfügbar", noData: "Keine Daten",
+    quorumOk: "Quorum erreichbar", quorumBad: "Quorum nicht erreichbar",
+    storageSub: "Gespeichert {kv} · Platte {disk}", proxySub: "Commit {c} · GRV {g} · Protokoll {l}",
+    reads: "Lesen", writes: "Schreiben", txStart: "Transaktionen gestartet", txCommit: "Transaktionen festgeschrieben",
+    readBytes: "Leseverkehr", writeBytes: "Schreibverkehr", commitLat: "Commit-Latenz", readLat: "Leselatenz",
+    dataState: "Datenstatus", recovery: "Wiederherstellung", serverVersion: "Serverversion", redundancy: "Redundanz",
+    engine: "Speicher-Engine", dataSize: "Datengröße", diskUsed: "Platte belegt", leastFree: "Wenigster freier Platz",
+    partitions: "Shards", faultLabel: "Tolerierte Ausfälle", fault: "Daten {d} · Verfügbarkeit {a}", generation: "Generation",
+    locked: "Gesperrt", notLocked: "Nein", dbLocked: "Datenbank gesperrt", limit: "Begrenzung", connection: "Verbindung",
+    procCount: "{n}", cores: "{n} Kerne", excluded: "Ausgeschlossen", degraded: "Leistung verringert", normal: "Normal",
+    noMessages: "Keine Meldungen. Der Cluster läuft normal.", message: "Meldung",
+    noCoordinators: "Keine Koordinatorinformationen.", reachable: "Erreichbar", unreachable: "Nicht erreichbar",
+    clusterUp: "Cluster verfügbar", clusterDown: "Cluster nicht verfügbar", version: "Version {v}",
+    statusDetail: "Details sind nicht verfügbar. Bestätigt ist nur die Verfügbarkeit.",
+    statusError: "Status nicht lesbar: {err}", keyCount: "{n} Schlüssel", emptyKey: "(leerer Schlüssel)",
+    empty: "(leer)", nBytes: "{n} Bytes", kindText: "Text", kindBytes: "Bytes",
+    scrollMore: "Nach unten scrollen, um mehr zu laden", loading: "Laden", reading: "Lesen",
+    scopeSearch: "Suche", scopeDir: "Verzeichnis", gone: "Dieser Schlüssel existiert nicht mehr",
+    binaryHint: "Binärdaten. Die Hex-Ansicht steht unten.",
+    lenFull: "{size} ({n} Bytes)", lenTrunc: "{size} ({n} Bytes, Hex gekürzt)",
+    expand: "{label} aufklappen", loadMore: "Mehr laden", noChildren: "Keine Kinder",
+    expandNode: "Aufklappen", collapseNode: "Zuklappen",
+    durDay: "{d} T {h} Std", durHour: "{h} Std {m} Min", durMin: "{m} Min",
+    leInt: "Als Little-Endian-Ganzzahl gelesen: {n}",
+    role_storage: "Speicher", role_log: "Protokoll", role_commit_proxy: "Commit-Proxy", role_grv_proxy: "GRV-Proxy",
+    role_resolver: "Konfliktprüfung", role_coordinator: "Koordinator", role_cluster_controller: "Controller",
+    role_master: "Master", role_data_distributor: "Datenverteilung", role_ratekeeper: "Begrenzung",
+    role_consistency_scan: "Konsistenzprüfung", role_blob_manager: "Blob-Verwaltung", role_blob_worker: "Blob Worker",
+    ds_healthy: "Gesund", ds_healthy_repartitioning: "Gesund (Neuaufteilung)", ds_healthy_removing_server: "Gesund (Knoten wird entfernt)",
+    ds_healing: "Reparatur", ds_initializing: "Initialisierung", ds_missing_data: "Daten fehlen",
+    lim_workload: "Nicht begrenzt. Die Last sättigt die Datenbank nicht",
+    rec_fully_recovered: "Vollständig wiederhergestellt", rec_accepting_commits: "Nimmt Commits an", rec_all_logs_recruited: "Protokolle bereit",
+    rec_writing_coordinated_state: "Schreibt koordinierten Zustand", rec_recruiting_transaction_servers: "Wirbt Transaktionsserver an"
+  },
+  fr: {
+    login: "Connexion", logout: "Déconnexion", loginUser: "Nom d'utilisateur", loginPassword: "Mot de passe",
+    loginHint: "Connectez-vous pour ouvrir la console.", loginFailed: "Le nom d'utilisateur ou le mot de passe est incorrect.",
+    loginEmpty: "Indiquez le nom d'utilisateur et le mot de passe.", loginLocked: "Trop de tentatives. Patientez, puis réessayez.",
+    overview: "Vue d'ensemble", data: "Données", config: "Configuration", checking: "Vérification",
+    mainNav: "Navigation", coordinators: "Coordinateurs", storageServers: "Stockage", proxies: "Proxys",
+    clients: "Clients", activeConnections: "Connexions actives", workload: "Charge",
+    chartStart: "Enregistrement en arrière-plan · grain {dur} · défilement pour zoomer", chartSpan: "Grain {dur} · pic {peak} ops/s · défilement pour zoomer",
+    clearChart: "Effacer les valeurs", clearChartAsk: "Effacer les lectures et écritures enregistrées ? L'enregistrement reprend à partir de maintenant.",
+    chartLabel: "Lectures et écritures par seconde", readOps: "Lecture ops/s", writeOps: "Écriture ops/s",
+    clusterInfo: "Cluster", processes: "Processus", address: "Adresse", className: "Classe",
+    roles: "Rôles", memory: "Mémoire", diskFree: "Disque libre", uptime: "Disponibilité", status: "État",
+    messages: "Messages", directory: "Répertoire", refresh: "Actualiser", search: "Rechercher",
+    searchPlaceholder: "Un fragment correspond au texte de la clé ou de la valeur. Guillemets et tuples restent un préfixe, par exemple \"M\"",
+    allKeys: "Toutes les clés", key: "Clé", value: "Valeur", type: "Type", size: "Taille",
+    noKeys: "Aucune clé correspondante", detail: "Détail", closeDetail: "Fermer", pickRow: "Choisissez une ligne pour voir la valeur",
+    copy: "Copier", copied: "Copié", copyFailed: "Échec de la copie", valueLength: "Longueur", hex: "Hex",
+    deleteKey: "Supprimer cette clé", deleteTitle: "Supprimer cette clé ?", deleteHint: "Seule cette clé est retirée.",
+    deleteSelected: "Supprimer la sélection", selectAll: "Tout sélectionner",
+    deleteManyTitle: "Supprimer les {n} clés sélectionnées ?", deleteManyHint: "Seules ces {n} clés sont retirées.",
+    deleteManyMore: "{n} de plus",
+    createKey: "Nouvelle clé", editValue: "Modifier la valeur", renameKey: "Renommer", watchKey: "Surveiller", watching: "Surveillance",
+    save: "Enregistrer", keyPlaceholder: "(\"demo\", \"note\", 1)", valuePlaceholder: "Valeur",
+    renameTitle: "Renommer cette clé ?", renameHint: "La valeur passe sur la nouvelle clé. L'ancienne clé est retirée.", newKey: "Nouvelle clé",
+    exportView: "Exporter", importView: "Importer", backup: "Sauvegarde", restore: "Restaurer",
+    importTitle: "Écrire les {n} clés de ce fichier ?", restoreTitle: "Restaurer {n} clés depuis cette sauvegarde ?",
+    restoreHint: "Seules les clés du fichier sont écrites. Rien d'autre n'est supprimé.",
+    writeFile: "Écrire ces clés", importEmpty: "Le fichier ne contient aucune clé", importTooMany: "Un fichier contient au plus 2000 clés",
+    clusterConfig: "Configuration du cluster", clusterConfigOf: "Configuration de {name}",
+    clusterConfigWait: "Connectez-vous à ce cluster pour modifier sa redondance, son moteur de stockage et ses rôles.",
+    saveConfig: "Enregistrer",
+    commitProxies: "Proxys de commit", grvProxies: "Proxys GRV", logs: "Journaux", resolvers: "Détection de conflits",
+    configNote: "{n} processus. single en demande 1, double 2, triple 3.",
+    configSame: "Aucun changement", configTitle: "Modifier la configuration du cluster ?",
+    configHint: "Seuls les champs modifiés sont écrits.", configSaved: "Configuration enregistrée",
+    cancel: "Annuler", confirmDelete: "Supprimer", settings: "Réglages", language: "Langue", appearance: "Apparence",
+    clusters: "Clusters", clusterAdd: "Ajouter un cluster", clusterName: "Nom", clusterConn: "Chaîne de connexion",
+    clusterUse: "Connecter", clusterCurrent: "Actuel", clusterRemove: "Retirer", clusterBuiltin: "Depuis l'environnement",
+    clusterUseTitle: "Se connecter à ce cluster ?", clusterUseHint: "La page passe sur ce cluster. Le graphique recommence à enregistrer.",
+    clusterRemoveTitle: "Retirer ce cluster ?", clusterRemoveHint: "Seule la connexion enregistrée est retirée.",
+    clusterNote: "Ce panneau écrit la redondance, le moteur de stockage et les quatre nombres de rôles. Coordinateurs, régions, chiffrement et mode locataire restent dans fdbcli.",
+    clusterNamePh: "lab", clusterConnPh: "docker:docker@host:4500",
+    light: "Clair", dark: "Sombre",
+    healthy: "Cluster sain", available: "Disponible", unavailable: "Indisponible", noData: "Aucune donnée",
+    quorumOk: "Quorum joignable", quorumBad: "Quorum injoignable",
+    storageSub: "Stocké {kv} · disque {disk}", proxySub: "Commit {c} · GRV {g} · journal {l}",
+    reads: "Lectures", writes: "Écritures", txStart: "Transactions démarrées", txCommit: "Transactions validées",
+    readBytes: "Trafic en lecture", writeBytes: "Trafic en écriture", commitLat: "Latence de commit", readLat: "Latence de lecture",
+    dataState: "État des données", recovery: "Reprise", serverVersion: "Version du serveur", redundancy: "Redondance",
+    engine: "Moteur de stockage", dataSize: "Taille des données", diskUsed: "Disque utilisé", leastFree: "Espace libre minimal",
+    partitions: "Fragments", faultLabel: "Pannes tolérées", fault: "Données {d} · disponibilité {a}", generation: "Génération",
+    locked: "Verrouillée", notLocked: "Non", dbLocked: "Base verrouillée", limit: "Limitation", connection: "Connexion",
+    procCount: "{n}", cores: "{n} cœurs", excluded: "Exclu", degraded: "Performance réduite", normal: "Normal",
+    noMessages: "Aucun message. Le cluster fonctionne normalement.", message: "Message",
+    noCoordinators: "Aucune information de coordinateur.", reachable: "Joignable", unreachable: "Injoignable",
+    clusterUp: "Cluster disponible", clusterDown: "Cluster indisponible", version: "Version {v}",
+    statusDetail: "Le détail est indisponible. Seule la disponibilité est confirmée.",
+    statusError: "Impossible de lire l'état : {err}", keyCount: "{n} clés", emptyKey: "(clé vide)",
+    empty: "(vide)", nBytes: "{n} octets", kindText: "Texte", kindBytes: "Octets",
+    scrollMore: "Faites défiler pour charger la suite", loading: "Chargement", reading: "Lecture",
+    scopeSearch: "Recherche", scopeDir: "Répertoire", gone: "Cette clé n'existe plus",
+    binaryHint: "Données binaires. La vue hexadécimale est plus bas.",
+    lenFull: "{size} ({n} octets)", lenTrunc: "{size} ({n} octets, hex tronqué)",
+    expand: "Déplier {label}", loadMore: "Charger plus", noChildren: "Aucun enfant",
+    expandNode: "Déplier", collapseNode: "Replier",
+    durDay: "{d} j {h} h", durHour: "{h} h {m} min", durMin: "{m} min",
+    leInt: "Lu comme un entier little-endian : {n}",
+    role_storage: "Stockage", role_log: "Journal", role_commit_proxy: "Proxy de commit", role_grv_proxy: "Proxy GRV",
+    role_resolver: "Détection de conflits", role_coordinator: "Coordinateur", role_cluster_controller: "Contrôleur",
+    role_master: "Master", role_data_distributor: "Répartition des données", role_ratekeeper: "Limitation",
+    role_consistency_scan: "Contrôle de cohérence", role_blob_manager: "Gestion Blob", role_blob_worker: "Blob Worker",
+    ds_healthy: "Sain", ds_healthy_repartitioning: "Sain (repartition)", ds_healthy_removing_server: "Sain (retrait d'un nœud)",
+    ds_healing: "Réparation", ds_initializing: "Initialisation", ds_missing_data: "Données manquantes",
+    lim_workload: "Sans limite. La charge ne sature pas la base",
+    rec_fully_recovered: "Reprise terminée", rec_accepting_commits: "Accepte les commits", rec_all_logs_recruited: "Journaux prêts",
+    rec_writing_coordinated_state: "Écriture de l'état coordonné", rec_recruiting_transaction_servers: "Recrutement des serveurs de transaction"
+  }
+};
+
+let lang = "en";
+let theme = "light";
+try {
+  const savedLang = localStorage.getItem("fdb-lang");
+  if (DICT[savedLang]) lang = savedLang;
+  if (localStorage.getItem("fdb-theme") === "dark") theme = "dark";
+} catch (e) {}
+
+const LOCALES = { en: "en", zh: "zh-CN", "zh-Hant": "zh-TW", ru: "ru", ja: "ja", de: "de", fr: "fr" };
+function uiLocale() { return LOCALES[lang] || "en"; }
+
+function t(key, vars) {
+  let text = (DICT[lang] && DICT[lang][key]) || DICT.en[key] || key;
+  if (vars) for (const [name, value] of Object.entries(vars)) text = text.replaceAll("{" + name + "}", value);
+  return text;
+}
+function roleName(name) { return t("role_" + name) === "role_" + name ? name : t("role_" + name); }
+function named(prefix, value) {
+  if (!value) return "-";
+  const key = prefix + value;
+  const text = t(key);
+  return text === key ? value : text;
+}
+function kindName(kind) {
+  if (kind === "text") return t("kindText");
+  if (kind === "bytes") return t("kindBytes");
+  if (kind === "json") return "JSON";
+  if (kind === "tuple") return "Tuple";
+  return kind || "";
+}
+function localizeNote(note) {
+  const match = /^按小端整数读取：(-?\d+)$/.exec(note || "");
+  return match ? t("leInt", { n: match[1] }) : (note || "");
+}
+
+function applyI18n() {
+  document.documentElement.lang = uiLocale();
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n);
+    if (node.classList.contains("node-label")) node.title = node.textContent;
+  }
+  for (const node of document.querySelectorAll("[data-i18n-aria]")) node.setAttribute("aria-label", t(node.dataset.i18nAria));
+  for (const node of document.querySelectorAll("[data-i18n-placeholder]")) node.placeholder = t(node.dataset.i18nPlaceholder);
+  $("#page-name").textContent = t(current === "data" ? "data" : current === "config" ? "config" : "overview");
+  $("#settings-btn").setAttribute("aria-label", t("settings"));
+  for (const button of document.querySelectorAll("#lang-list button, #login-lang-list button")) button.classList.toggle("on", button.dataset.lang === lang);
+  for (const button of document.querySelectorAll("#theme-seg button")) button.classList.toggle("on", button.dataset.theme === theme);
+  paintLoginTools();
+  paintClusterConfig();
+  syncPicks();
+  const watchLabel = $("#watch span");
+  if (watchLabel) watchLabel.textContent = watching ? t("watching") : t("watchKey");
+  const watchBtn = $("#watch");
+  if (watchBtn) watchBtn.classList.toggle("on", watching);
+  for (const tag of document.querySelectorAll("button.node-twist")) {
+    const open = tag.closest(".node-row").classList.contains("open");
+    tag.setAttribute("aria-label", t(open ? "collapseNode" : "expandNode"));
+  }
+}
+
+function setLang(next) {
+  if (!DICT[next]) return;
+  lang = next;
+  try { localStorage.setItem("fdb-lang", lang); } catch (e) {}
+  applyI18n();
+  if (lastOverview && lastOverview.processes) renderOverview(lastOverview);
+  else if (lastOverview) paintStatus(lastOverview, lastOverview.connection || "");
+  paintBadge();
+  if (dataReady) reload();
+}
+
+function paintLoginTools() {
+  const names = { en: "English", zh: "简体中文", "zh-Hant": "繁體中文", ru: "Русский", ja: "日本語", de: "Deutsch", fr: "Français" };
+  const label = $("#login-lang-label");
+  if (label) label.textContent = names[lang] || names.en;
+  const themeBtn = $("#login-theme");
+  if (themeBtn) themeBtn.classList.toggle("is-dark", theme === "dark");
+}
+
+function setTheme(next) {
+  theme = next === "dark" ? "dark" : "light";
+  if (theme === "dark") document.documentElement.dataset.theme = "dark";
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem("fdb-theme", theme); } catch (e) {}
+  for (const button of document.querySelectorAll("#theme-seg button")) button.classList.toggle("on", button.dataset.theme === theme);
+  paintLoginTools();
+  drawChart();
+}
+
+/* ---------- routing ---------- */
+const views = {
+  overview: { nav: $("#nav-overview"), view: $("#view-overview") },
+  data: { nav: $("#nav-data"), view: $("#view-data") },
+  config: { nav: $("#nav-config"), view: $("#view-config") },
+};
+let current = "";
+let dataReady = false;
+let entered = false;
+let authRequired = false;
+let pollTimer = 0;
+
+function showLogin() {
+  entered = false;
+  current = "";
+  dataReady = false;
+  $("#app").hidden = true;
+  $("#login").hidden = false;
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = 0;
+  }
+}
+
+function enterApp() {
+  if (entered) return;
+  entered = true;
+  $("#login").hidden = true;
+  $("#app").hidden = false;
+  $("#logout-btn").hidden = !authRequired;
+  route();
+  pollOverview();
+  pollTimer = setInterval(() => { if (!document.hidden && entered) pollOverview(); }, 3000);
+}
+
+function route() {
+  if (!entered) return;
+  const name = location.hash === "#/data" ? "data" : location.hash === "#/config" ? "config" : "overview";
+  if (name === current) return;
+  current = name;
+  for (const [key, item] of Object.entries(views)) {
+    item.view.hidden = key !== name;
+    item.nav.classList.toggle("on", key === name);
+  }
+  $("#page-name").textContent = t(name);
+  $("#page-sub").textContent = "";
+  closePickers();
+  if (name === "overview") requestAnimationFrame(drawChart);
+  if (name === "config") loadClusters();
+  if (name === "data" && !dataReady) {
+    dataReady = true;
+    initTree();
+    reload();
+  }
+}
+
+/* ---------- overview ---------- */
+let lastOverview = null;
+const TREND_KEEP_MS = 24 * 60 * 60 * 1000;
+const GRAINS = [60, 300, 900, 1800, 3600, 3 * 3600, 6 * 3600, 12 * 3600, 24 * 3600];
+let samples = [];
+let trendSince = 0;
+let grainIndex = 2;
+let grainSet = false;
+let plot = null;
+let plotTheme = "";
+let viewMin = 0;
+let viewMax = 1;
+
+async function clearSamples() {
+  await postJSON("/api/trend/clear", { confirm: true });
+  samples = [];
+  trendSince = 0;
+  grainSet = false;
+  $("#chart-clear-pop").hidden = true;
+  drawChart();
+}
+
+async function pollTrend() {
+  const body = await readJSON(await fetch("/api/trend?since=" + trendSince));
+  const list = Array.isArray(body.samples) ? body.samples : [];
+  if (!trendSince) samples = list.filter((s) => s && Number.isFinite(s.t));
+  else {
+    for (const sample of list) {
+      if (sample && sample.t > trendSince) samples.push(sample);
+    }
+  }
+  const cutoff = Date.now() - TREND_KEEP_MS;
+  if (samples.length && samples[0].t < cutoff) samples = samples.filter((s) => s.t >= cutoff);
+  if (samples.length) trendSince = samples[samples.length - 1].t;
+  if (!grainSet && samples.length >= 2) {
+    const span = (samples[samples.length - 1].t - samples[0].t) / 1000;
+    let idx = 0;
+    while (idx < GRAINS.length - 1 && GRAINS[idx] < Math.max(span, 60)) idx++;
+    grainIndex = idx;
+    grainSet = true;
+  }
+  if (current === "overview") drawChart();
+}
+
+function paintBadge() {
+  const badge = $("#top-badge");
+  if (!badge || !lastOverview) return;
+  const ov = lastOverview;
+  badge.hidden = false;
+  badge.className = "badge " + (ov.available ? "ok" : "bad");
+  badge.querySelector(".badge-label").textContent = ov.available ? (ov.healthy ? t("healthy") : t("available")) : t("unavailable");
+}
+
+function infoRow(name, value, mono) {
+  const row = el("div");
+  row.append(el("dt", "", name), el("dd", mono ? "mono" : "", value));
+  return row;
+}
+
+function renderOverview(ov) {
+  $("#ov-error").hidden = true;
+  const reachable = (ov.coordinators || []).filter((c) => c.reachable).length;
+  const total = (ov.coordinators || []).length;
+  $("#c-coord").replaceChildren(document.createTextNode(String(reachable)), el("small", "", " / " + total));
+  const coordHint = $("#c-coord-sub");
+  coordHint.textContent = !total ? t("noData") : (ov.quorum_reachable ? t("quorumOk") : t("quorumBad"));
+  coordHint.className = "hint " + (!total ? "" : ov.quorum_reachable ? "ok" : "bad");
+
+  $("#c-storage").textContent = String(ov.roles.storage);
+  $("#c-storage-sub").textContent = t("storageSub", { kv: fmtBytes(ov.data.kv_bytes), disk: fmtBytes(ov.data.disk_bytes) });
+  const proxies = ov.roles.commit_proxy + ov.roles.grv_proxy;
+  $("#c-proxy").textContent = String(proxies);
+  $("#c-proxy-sub").textContent = t("proxySub", { c: ov.roles.commit_proxy, g: ov.roles.grv_proxy, l: ov.roles.log });
+  $("#c-clients").textContent = String(ov.clients);
+
+  const w = ov.workload;
+  const metrics = [
+    [t("reads"), fmtRate(w.reads), "ops/s"],
+    [t("writes"), fmtRate(w.writes), "ops/s"],
+    [t("txStart"), fmtRate(w.started), "/s"],
+    [t("txCommit"), fmtRate(w.committed), "/s"],
+    [t("readBytes"), fmtBytes(w.read_bytes), "/s"],
+    [t("writeBytes"), fmtBytes(w.written_bytes), "/s"],
+    [t("commitLat"), fmtMs(ov.latency.commit_ms), ""],
+    [t("readLat"), fmtMs(ov.latency.read_ms), ""],
+  ];
+  const box = $("#metrics");
+  box.replaceChildren();
+  for (const [label, value, unit] of metrics) {
+    const item = el("div", "metric");
+    const val = el("div", "val", value);
+    if (unit) val.append(el("small", "", " " + unit));
+    item.append(el("div", "label", label), val);
+    box.append(item);
+  }
+
+  drawChart();
+
+  const info = $("#info");
+  info.replaceChildren(
+    infoRow(t("dataState"), named("ds_", ov.data_state)),
+    infoRow(t("recovery"), named("rec_", ov.recovery)),
+    infoRow(t("serverVersion"), ov.server_version || "-"),
+    infoRow(t("redundancy"), ov.redundancy || "-"),
+    infoRow(t("engine"), ov.storage_engine || "-"),
+    infoRow(t("dataSize"), fmtBytes(ov.data.kv_bytes)),
+    infoRow(t("diskUsed"), fmtBytes(ov.data.disk_bytes)),
+    infoRow(t("leastFree"), fmtBytes(ov.data.least_free_bytes)),
+    infoRow(t("partitions"), String(ov.data.partitions)),
+    infoRow(t("faultLabel"), t("fault", { d: ov.fault_tolerance.data, a: ov.fault_tolerance.availability })),
+    infoRow(t("uptime"), fmtDuration(ov.uptime_seconds)),
+    infoRow(t("generation"), String(ov.generation || "-")),
+    infoRow(t("dbLocked"), ov.locked ? t("locked") : t("notLocked")),
+    infoRow(t("limit"), named("lim_", ov.limited_by_name) !== "-" ? named("lim_", ov.limited_by_name) : (ov.limited_by || "-")),
+    infoRow(t("connection"), ov.connection || "-", true),
+  );
+
+  $("#proc-count").textContent = t("procCount", { n: ov.processes.length });
+  const body = $("#procs");
+  body.replaceChildren();
+  for (const p of ov.processes) {
+    const tr = el("tr");
+    tr.append(el("td", "mono", p.address));
+    tr.append(el("td", "", p.class || "-"));
+    const roles = el("td");
+    for (const r of p.roles) roles.append(el("span", "chip", roleName(r)));
+    tr.append(roles);
+    tr.append(el("td", "", t("cores", { n: p.cpu_cores.toFixed(2) })));
+    tr.append(el("td", "", fmtBytes(p.memory_used_bytes) + (p.memory_limit_bytes ? " / " + fmtBytes(p.memory_limit_bytes) : "")));
+    tr.append(el("td", "", p.disk_total_bytes ? fmtBytes(p.disk_free_bytes) + " / " + fmtBytes(p.disk_total_bytes) : "-"));
+    tr.append(el("td", "", fmtDuration(p.uptime_seconds)));
+    const state = el("td");
+    if (p.excluded) state.append(el("span", "tag warn", t("excluded")));
+    else if (p.degraded) state.append(el("span", "tag warn", t("degraded")));
+    else state.append(el("span", "tag", t("normal")));
+    tr.append(state);
+    body.append(tr);
+  }
+
+  const messages = $("#messages");
+  messages.replaceChildren();
+  if (!ov.messages.length) {
+    messages.append(el("p", "none", t("noMessages")));
+  } else {
+    const rows = el("div", "rows");
+    for (const m of ov.messages) {
+      const item = el("div", "row-item");
+      const text = el("div");
+      text.append(el("p", "", m.name || t("message")), el("small", "", (m.description || "") + (m.source ? " (" + m.source + ")" : "")));
+      item.append(text);
+      rows.append(item);
+    }
+    messages.append(rows);
+  }
+
+  const coords = $("#coords");
+  coords.replaceChildren();
+  if (!total) {
+    coords.append(el("p", "none", t("noCoordinators")));
+  } else {
+    const rows = el("div", "rows");
+    for (const c of ov.coordinators) {
+      const item = el("div", "row-item");
+      item.append(el("span", "mono", c.address), el("span", "tag" + (c.reachable ? "" : " bad"), c.reachable ? t("reachable") : t("unreachable")));
+      rows.append(item);
+    }
+    coords.append(rows);
+  }
+  fillConfig(ov);
+}
+
+let configBaseline = null;
+function setSelect(id, value, fallback) {
+  const node = $(id);
+  const next = value || fallback;
+  if (![...node.options].some((opt) => opt.value === next)) {
+    node.append(new Option(next, next));
+  }
+  node.value = next;
+  if (node.paintPicker) node.paintPicker();
+}
+function fillConfig(ov) {
+  const chosen = selectedCluster();
+  if (chosen && !chosen.current) return;
+  const form = $("#config-form");
+  if (!form || form.contains(document.activeElement)) return;
+  const c = ov.config || {};
+  configBaseline = {
+    redundancy_mode: c.redundancy_mode || ov.redundancy || "single",
+    storage_engine: c.storage_engine || ov.storage_engine || "ssd-2",
+    commit_proxies: c.commit_proxies || 0,
+    grv_proxies: c.grv_proxies || 0,
+    logs: c.logs || 0,
+    resolvers: c.resolvers || 0,
+  };
+  setSelect("#cfg-redundancy", configBaseline.redundancy_mode, "single");
+  setSelect("#cfg-engine", configBaseline.storage_engine, "ssd-2");
+  $("#cfg-commit").value = configBaseline.commit_proxies ? String(configBaseline.commit_proxies) : "";
+  $("#cfg-grv").value = configBaseline.grv_proxies ? String(configBaseline.grv_proxies) : "";
+  $("#cfg-logs").value = configBaseline.logs ? String(configBaseline.logs) : "";
+  $("#cfg-resolvers").value = configBaseline.resolvers ? String(configBaseline.resolvers) : "";
+  const n = c.processes || (ov.processes || []).length;
+  $("#config-note").textContent = t("configNote", { n });
+}
+
+function windowPeak() {
+  let peak = 0;
+  const t0 = viewMin * 1000;
+  const t1 = viewMax * 1000;
+  for (const sample of samples) {
+    if (sample.t < t0 || sample.t > t1) continue;
+    peak = Math.max(peak, sample.r, sample.w);
+  }
+  return peak;
+}
+
+function trendData() {
+  const t0 = viewMin * 1000;
+  const t1 = viewMax * 1000;
+  const visible = [];
+  for (const sample of samples) {
+    if (sample.t >= t0 && sample.t <= t1) visible.push(sample);
+  }
+  const bucketMs = Math.max(5000, (t1 - t0) / 160);
+  if (!visible.length) {
+    return [[viewMin, viewMax], [null, null], [null, null]];
+  }
+  if (bucketMs <= 6000) {
+    const xs = [];
+    const reads = [];
+    const writes = [];
+    for (let i = 0; i < visible.length; i++) {
+      const sample = visible[i];
+      if (i > 0 && sample.t - visible[i - 1].t > 180000) {
+        xs.push(sample.t / 1000 - 0.001);
+        reads.push(null);
+        writes.push(null);
+      }
+      xs.push(sample.t / 1000);
+      reads.push(sample.r);
+      writes.push(sample.w);
+    }
+    return [xs, reads, writes];
+  }
+  const start = Math.floor(t0 / bucketMs) * bucketMs;
+  const xs = [];
+  const reads = [];
+  const writes = [];
+  let index = 0;
+  for (let edge = start; edge <= t1; edge += bucketMs) {
+    let count = 0;
+    let read = 0;
+    let write = 0;
+    while (index < visible.length && visible[index].t < edge) index++;
+    while (index < visible.length && visible[index].t < edge + bucketMs) {
+      read += visible[index].r;
+      write += visible[index].w;
+      count++;
+      index++;
+    }
+    xs.push((edge + bucketMs / 2) / 1000);
+    reads.push(count ? read / count : null);
+    writes.push(count ? write / count : null);
+  }
+  return [xs, reads, writes];
+}
+
+function chartColors() {
+  const css = getComputedStyle(document.documentElement);
+  const pick = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  return { ink: pick("--muted", "#6e6e73"), grid: pick("--grid", "rgba(0,0,0,0.06)"), read: pick("--accent", "#289dfc"), write: pick("--write", "#8e8e93") };
+}
+
+function chartTooltip() {
+  let tip;
+  return {
+    hooks: {
+      init: [(u) => {
+        tip = el("div", "chart-tip");
+        tip.hidden = true;
+        u.over.appendChild(tip);
+      }],
+      setCursor: [(u) => {
+        const idx = u.cursor.idx;
+        const ts = idx == null ? null : u.data[0][idx];
+        const read = idx == null ? null : u.data[1][idx];
+        const write = idx == null ? null : u.data[2][idx];
+        if (ts == null || (read == null && write == null)) {
+          tip.hidden = true;
+          return;
+        }
+        tip.hidden = false;
+        tip.replaceChildren(el("div", "when", new Date(ts * 1000).toLocaleString(uiLocale())));
+        const colors = chartColors();
+        if (read != null) tip.append(tipLine(colors.read, t("readOps"), fmtRate(read) + " ops/s"));
+        if (write != null) tip.append(tipLine(colors.write, t("writeOps"), fmtRate(write) + " ops/s"));
+        const width = tip.offsetWidth;
+        const height = tip.offsetHeight;
+        let x = u.cursor.left + 14;
+        let y = u.cursor.top + 14;
+        if (x + width > u.over.clientWidth) x = Math.max(4, u.cursor.left - width - 14);
+        if (y + height > u.over.clientHeight) y = Math.max(4, u.cursor.top - height - 14);
+        tip.style.left = x + "px";
+        tip.style.top = y + "px";
+      }],
+    },
+  };
+}
+
+function tipLine(color, label, value) {
+  const row = el("div");
+  const mark = el("i");
+  mark.style.background = color;
+  row.append(mark, document.createTextNode(label + "  " + value));
+  return row;
+}
+
+function axisTimes(splits) {
+  const locale = uiLocale();
+  const grain = GRAINS[grainIndex];
+  let prev = "";
+  return splits.map((v) => {
+    if (v == null) return "";
+    const d = new Date(v * 1000);
+    const day = d.toLocaleDateString(locale, { month: "numeric", day: "numeric" });
+    const time = grain <= 60
+      ? d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: lang === "en" })
+      : d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: lang === "en" });
+    const label = day === prev ? time : day + " " + time;
+    prev = day;
+    return label;
+  });
+}
+
+function placeWindow() {
+  viewMax = Date.now() / 1000;
+  viewMin = viewMax - GRAINS[grainIndex];
+}
+
+function chartOptions(width, height) {
+  const c = chartColors();
+  const grid = { stroke: c.grid, width: 1 };
+  const ticks = { stroke: c.grid, width: 1 };
+  const smooth = typeof uPlot.paths.spline === "function" ? uPlot.paths.spline() : undefined;
+  return {
+    width, height, pxAlign: false,
+    cursor: { drag: { x: false, y: false }, points: { show: false } },
+    legend: { show: false },
+    scales: { x: { time: true, range: () => [viewMin, viewMax] } },
+    axes: [
+      { stroke: c.ink, grid, ticks, space: 80, incrs: [10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200, 86400], values: (u, splits) => axisTimes(splits) },
+      { stroke: c.ink, grid, ticks, size: 48 },
+    ],
+    series: [
+      {},
+      { stroke: c.read, width: 2, points: { show: false }, paths: smooth },
+      { stroke: c.write, width: 2, points: { show: false }, paths: smooth },
+    ],
+    plugins: [chartTooltip()],
+  };
+}
+
+function drawChart() {
+  const host = $("#chart");
+  if (!host || typeof uPlot !== "function") return;
+  const width = host.clientWidth;
+  const height = host.clientHeight;
+  placeWindow();
+  const grainLabel = fmtDuration(GRAINS[grainIndex]);
+  const peak = windowPeak();
+  $("#chart-span").textContent = samples.length < 2 ? t("chartStart", { dur: grainLabel }) : t("chartSpan", { dur: grainLabel, peak: fmtRate(peak) });
+  if (width < 10 || height < 10) return;
+  const data = trendData();
+  if (!plot || plotTheme !== theme) {
+    if (plot) plot.destroy();
+    host.replaceChildren();
+    plot = new uPlot(chartOptions(width, height), data, host);
+    plotTheme = theme;
+    return;
+  }
+  plot.setData(data);
+  if (plot.width !== width || plot.height !== height) plot.setSize({ width, height });
+}
+
+function paintStatus(ov, connection) {
+  const tip = $("#status-tip");
+  tip.replaceChildren(el("b", "", ov.available ? t("clusterUp") : t("clusterDown")));
+  if (connection) tip.append(el("span", "mono", connection));
+  if (ov.server_version) tip.append(el("span", "", t("version", { v: ov.server_version })));
+}
+
+async function pollOverview() {
+  try {
+    const body = await readJSON(await fetch("/api/overview"));
+    lastOverview = body;
+    paintStatus(body, body.connection);
+    paintBadge();
+    if (body.processes) renderOverview(body);
+    else $("#ov-error").hidden = true;
+    if (current === "overview" && !body.processes) {
+      const box = $("#ov-error");
+      box.hidden = false;
+      box.textContent = body.detail || t("statusDetail");
+    }
+  } catch (err) {
+    lastOverview = { available: false };
+    paintStatus({ available: false }, "");
+    paintBadge();
+    const box = $("#ov-error");
+    box.hidden = false;
+    box.textContent = t("statusError", { err: err.message });
+  }
+  try { await pollTrend(); } catch (err) {}
+}
+
+/* ---------- data browser ---------- */
+const listEl = $("#list");
+const keysBody = $("#keys");
+const listError = $("#list-error");
+const emptyEl = $("#empty");
+const footEl = $("#foot");
+const countEl = $("#count");
+const queryEl = $("#q");
+
+let generation = 0;
+let queryText = "";
+let currentPrefix = "";
+let nextStart = "";
+let hasMore = false;
+let count = 0;
+let selected = null;
+let watching = false;
+let watchTimer = null;
+let lastHex = "";
+let pendingImport = null;
+const picked = new Map();
+let confirmMode = "one";
+let wantMore = false;
+let chain = Promise.resolve();
+
+function enqueue(task) {
+  const run = chain.then(task, task);
+  chain = run.then(() => {}, () => {});
+  return run;
+}
+function showError(message) {
+  listError.hidden = !message;
+  listError.textContent = message || "";
+}
+function setCount() { countEl.textContent = count ? t("keyCount", { n: count }) : ""; }
+function nearBottom() { return listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 80; }
+function keyLabel(row) { return row.tuple_ok ? row.tuple_text : (row.hex || t("emptyKey")); }
+
+function renderHex(hex) {
+  const host = $("#detail-hex");
+  host.replaceChildren();
+  const bytes = (hex || "").match(/.{1,2}/g) || [];
+  if (!bytes.length) {
+    host.textContent = t("empty");
+    return;
+  }
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16);
+    const row = el("div", "hexrow");
+    row.append(el("span", "hexoff", i.toString(16).padStart(8, "0")));
+    chunk.forEach((h, idx) => {
+      const byte = el("span", "hexb" + (idx === 8 ? " mid" : ""), h);
+      row.append(byte);
+    });
+    const ascii = chunk.map((h) => {
+      const c = parseInt(h, 16);
+      return c >= 32 && c < 127 ? String.fromCharCode(c) : ".";
+    }).join("");
+    row.append(el("span", "hexascii", ascii));
+    host.append(row);
+  }
+}
+
+function syncPicks() {
+  const btn = $("#delete-selected");
+  if (!btn) return;
+  btn.hidden = picked.size === 0;
+  const boxes = [...keysBody.querySelectorAll("input.pick")];
+  const on = boxes.filter((box) => box.checked).length;
+  const all = $("#pick-all");
+  all.checked = boxes.length > 0 && on === boxes.length;
+  all.indeterminate = on > 0 && on < boxes.length;
+  all.disabled = boxes.length === 0;
+}
+
+function appendKey(row) {
+  const line = el("div", "keyline");
+  line.row = row;
+  const pick = el("input", "pick");
+  pick.type = "checkbox";
+  pick.checked = picked.has(row.hex);
+  pick.setAttribute("aria-label", keyLabel(row));
+  pick.addEventListener("change", () => {
+    if (pick.checked) picked.set(row.hex, row);
+    else picked.delete(row.hex);
+    syncPicks();
+  });
+  const btn = el("button", "key" + (selected && selected.hex === row.hex ? " selected" : ""));
+  btn.type = "button";
+  btn.dataset.hex = row.hex;
+  const label = keyLabel(row);
+  btn.setAttribute("aria-label", label);
+  const kind = row.value_kind || "bytes";
+  const type = el("div", "tcell");
+  const tag = el("span", "kindtag " + kind, kindName(kind));
+  type.append(tag);
+  btn.append(
+    el("div", "kcell", label),
+    el("div", "vcell" + (kind === "bytes" ? " bytes" : ""), row.value_text || (row.value_length ? t("nBytes", { n: row.value_length }) : t("empty"))),
+    type,
+    el("div", "scell", fmtBytes(row.value_length)),
+  );
+  btn.addEventListener("click", () => selectKey(row));
+  line.append(pick, btn);
+  keysBody.append(line);
+}
+
+async function pull(start, gen) {
+  const params = new URLSearchParams();
+  if (queryText) params.set("q", queryText);
+  else if (currentPrefix) params.set("prefix", currentPrefix);
+  if (start) params.set("start", start);
+  const body = await readJSON(await fetch("/api/keys?" + params));
+  if (gen !== generation) return;
+  for (const row of body.keys) appendKey(row);
+  count += body.keys.length;
+  hasMore = !!body.has_more;
+  nextStart = hasMore ? body.next_start_hex : "";
+  emptyEl.hidden = count !== 0;
+  setCount();
+  footEl.textContent = hasMore ? t("scrollMore") : "";
+  syncPicks();
+}
+
+function paintScope() {
+  const code = $("#scope-code");
+  if (queryText) {
+    $("#scope-text").textContent = t("scopeSearch");
+    code.hidden = false;
+    code.textContent = queryText;
+    code.title = queryText;
+  } else if (currentPrefix && activeLabel) {
+    $("#scope-text").textContent = t("scopeDir");
+    code.hidden = false;
+    code.textContent = activeLabel;
+    code.title = activeLabel;
+  } else {
+    $("#scope-text").textContent = t("allKeys");
+    code.hidden = true;
+  }
+}
+
+function hideDetail() {
+  stopWatch();
+  selected = null;
+  $("#detail-pane").hidden = true;
+  $("#view-data").classList.remove("detail-open");
+  $("#detail-body").hidden = true;
+  $("#detail-foot").hidden = true;
+  $("#detail-empty").hidden = false;
+  for (const btn of keysBody.querySelectorAll("button.key.selected")) btn.classList.remove("selected");
+}
+
+function reload() {
+  const gen = ++generation;
+  hideDetail();
+  picked.clear();
+  syncPicks();
+  paintScope();
+  return enqueue(async () => {
+    if (gen !== generation) return;
+    count = 0;
+    hasMore = false;
+    nextStart = "";
+    keysBody.replaceChildren();
+    emptyEl.hidden = true;
+    setCount();
+    showError("");
+    footEl.textContent = t("reading");
+    try {
+      await pull("", gen);
+      while (gen === generation && hasMore && listEl.scrollHeight <= listEl.clientHeight + 4) {
+        await pull(nextStart, gen);
+      }
+    } catch (err) {
+      if (gen !== generation) return;
+      showError(err.message);
+      footEl.textContent = "";
+    }
+  });
+}
+
+function requestMore() {
+  if (wantMore || !hasMore) return;
+  wantMore = true;
+  const gen = generation;
+  enqueue(async () => {
+    wantMore = false;
+    if (gen !== generation || !hasMore || !nearBottom()) return;
+    footEl.textContent = t("loading");
+    try {
+      await pull(nextStart, gen);
+    } catch (err) {
+      if (gen !== generation) return;
+      showError(err.message);
+      footEl.textContent = "";
+      return;
+    }
+    if (gen === generation && hasMore && nearBottom()) requestMore();
+  });
+}
+
+async function copyText(text, button) {
+  const label = button.querySelector("span");
+  const original = label.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    label.textContent = t("copied");
+  } catch {
+    label.textContent = t("copyFailed");
+  }
+  setTimeout(() => { label.textContent = original; }, 1200);
+}
+
+async function selectKey(row) {
+  if (selected && selected.hex === row.hex) {
+    hideDetail();
+    return;
+  }
+  selected = row;
+  for (const btn of keysBody.querySelectorAll("button.key")) {
+    btn.classList.toggle("selected", btn.dataset.hex === row.hex);
+  }
+  $("#detail-pane").hidden = false;
+  $("#view-data").classList.add("detail-open");
+  $("#detail-empty").hidden = true;
+  $("#detail-body").hidden = false;
+  $("#detail-foot").hidden = false;
+  $("#detail-key").textContent = keyLabel(row) + (row.tuple_ok ? "\n" + row.hex : "");
+  $("#detail-content").textContent = row.value_text || "";
+  paintKind($("#detail-kind"), row.value_kind);
+  $("#detail-note").hidden = true;
+  $("#detail-len").textContent = t("lenFull", { size: fmtBytes(row.value_length), n: row.value_length });
+  $("#detail-hex").textContent = "";
+  try {
+    const body = await readJSON(await fetch("/api/value?key=" + encodeURIComponent(row.hex)));
+    if (selected !== row) return;
+    paintValue(row, body);
+  } catch (err) {
+    if (selected !== row) return;
+    $("#detail-content").textContent = err.message;
+  }
+  armWatch();
+}
+
+function paintKind(node, kind) {
+  const name = kind || "bytes";
+  node.className = "kindtag " + name;
+  node.textContent = kindName(name);
+}
+
+function paintValue(row, body) {
+  if (!body.found) {
+    $("#detail-content").textContent = t("gone");
+    $("#detail-kind").textContent = "";
+    $("#detail-kind").className = "kindtag";
+    row.live = null;
+    return;
+  }
+  const kind = body.kind || "bytes";
+  paintKind($("#detail-kind"), kind);
+  $("#detail-content").textContent = kind === "bytes" ? t("binaryHint") : body.text;
+  $("#detail-content").classList.toggle("plain", kind === "bytes");
+  const note = $("#detail-note");
+  note.hidden = !body.note;
+  note.textContent = localizeNote(body.note);
+  $("#detail-len").textContent = t(body.truncated ? "lenTrunc" : "lenFull", { size: fmtBytes(body.length), n: body.length });
+  renderHex(body.hex);
+  lastHex = body.hex || "";
+  row.live = { kind, text: body.text || "", hex: body.hex || "", length: body.length };
+  const line = keysBody.querySelector('button.key[data-hex="' + CSS.escape(row.hex) + '"]');
+  if (line) {
+    const value = line.querySelector(".vcell");
+    value.className = "vcell" + (kind === "bytes" ? " bytes" : "");
+    value.textContent = kind === "bytes" ? (body.text || t("nBytes", { n: body.length })) : (body.text || t("empty"));
+    const tag = line.querySelector(".kindtag");
+    if (tag) paintKind(tag, kind);
+    row.value_kind = kind;
+    row.value_text = body.text || "";
+    row.value_length = body.length;
+  }
+}
+
+function stopWatch() {
+  if (watchTimer) clearInterval(watchTimer);
+  watchTimer = null;
+}
+
+function armWatch() {
+  stopWatch();
+  const label = $("#watch span");
+  if (label) label.textContent = watching ? t("watching") : t("watchKey");
+  $("#watch").classList.toggle("on", watching);
+  if (!watching || !selected) return;
+  watchTimer = setInterval(async () => {
+    if (!watching || !selected) return;
+    const row = selected;
+    try {
+      const body = await readJSON(await fetch("/api/value?key=" + encodeURIComponent(row.hex)));
+      if (selected !== row || !watching) return;
+      if ((body.hex || "") === lastHex) return;
+      paintValue(row, body);
+    } catch (err) {}
+  }, 2000);
+}
+
+function openWrite(mode) {
+  $("#write-error").textContent = "";
+  $("#write-title").textContent = t(mode === "edit" ? "editValue" : "createKey");
+  const key = $("#write-key");
+  key.readOnly = mode === "edit";
+  if (mode === "edit" && selected) {
+    key.value = keyLabel(selected);
+    const live = selected.live || {};
+    $("#write-kind").value = live.kind || selected.value_kind || "text";
+    if ($("#write-kind").paintPicker) $("#write-kind").paintPicker();
+    $("#write-value").value = (live.kind || selected.value_kind) === "bytes" ? (live.hex || "") : (live.text || selected.value_text || "");
+  } else {
+    key.value = "";
+    $("#write-kind").value = "text";
+    if ($("#write-kind").paintPicker) $("#write-kind").paintPicker();
+    $("#write-value").value = "";
+  }
+  $("#write").dataset.mode = mode;
+  $("#write").showModal();
+  (mode === "edit" ? $("#write-value") : key).focus();
+}
+
+async function postJSON(url, payload) {
+  return readJSON(await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+async function downloadDump(kind) {
+  const params = new URLSearchParams();
+  if (kind === "export") {
+    if (queryText) params.set("q", queryText);
+    else if (currentPrefix) params.set("prefix", currentPrefix);
+  }
+  const res = await fetch(kind === "backup" ? "/api/backup" : "/api/export?" + params);
+  if (!res.headers.get("content-disposition")) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || res.statusText);
+  }
+  const blob = await res.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = kind + ".json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function readImportFile(file, mode) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let doc;
+    try { doc = JSON.parse(String(reader.result || "")); }
+    catch (err) {
+      $("#io-title").textContent = t(mode === "restore" ? "restore" : "importView");
+      $("#io-hint").textContent = err.message;
+      $("#io-error").textContent = "";
+      pendingImport = null;
+      $("#io-ok").disabled = true;
+      $("#io-confirm").showModal();
+      return;
+    }
+    const keys = Array.isArray(doc.keys) ? doc.keys.map((item) => ({ key_hex: item.key_hex, value_hex: item.value_hex || "" })) : [];
+    $("#io-title").textContent = t(mode === "restore" ? "restoreTitle" : "importTitle", { n: keys.length });
+    $("#io-hint").textContent = t("restoreHint");
+    $("#io-error").textContent = keys.length === 0 ? t("importEmpty") : (keys.length > 2000 ? t("importTooMany") : "");
+    pendingImport = keys.length && keys.length <= 2000 ? keys : null;
+    $("#io-ok").disabled = !pendingImport;
+    $("#io-confirm").showModal();
+  };
+  reader.readAsText(file);
+}
+
+function readConfigForm() {
+  const num = (id, current) => {
+    const raw = $(id).value.trim();
+    if (!raw) return current;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : current;
+  };
+  const base = configBaseline || {};
+  return {
+    redundancy_mode: $("#cfg-redundancy").value,
+    storage_engine: $("#cfg-engine").value,
+    commit_proxies: num("#cfg-commit", base.commit_proxies || 0),
+    grv_proxies: num("#cfg-grv", base.grv_proxies || 0),
+    logs: num("#cfg-logs", base.logs || 0),
+    resolvers: num("#cfg-resolvers", base.resolvers || 0),
+  };
+}
+
+function removeKey(hex) {
+  const btn = keysBody.querySelector('button.key[data-hex="' + CSS.escape(hex) + '"]');
+  if (btn) {
+    btn.closest(".keyline").remove();
+    count = Math.max(0, count - 1);
+    setCount();
+  }
+  picked.delete(hex);
+  if (selected && selected.hex === hex) hideDetail();
+  syncPicks();
+  emptyEl.hidden = count !== 0;
+  if (hasMore && listEl.scrollHeight <= listEl.clientHeight + 4) requestMore();
+}
+
+/* ---------- directory tree ---------- */
+const treeEl = $("#tree");
+let activeRow = null;
+let activeLabel = "";
+
+function setActive(row, prefixHex, label) {
+  if (activeRow) activeRow.classList.remove("active");
+  activeRow = row;
+  if (row) row.classList.add("active");
+  currentPrefix = prefixHex;
+  activeLabel = label || "";
+  queryText = "";
+  queryEl.value = "";
+  reload();
+}
+
+function buildNode(item, depth) {
+  const wrap = el("div", "node");
+  const row = el("div", "node-row");
+  row.style.paddingLeft = 2 + depth * 18 + "px";
+  const label = el("button", "node-label", item.labelKey ? t(item.labelKey) : item.label);
+  if (item.labelKey) label.dataset.i18n = item.labelKey;
+  label.type = "button";
+  label.title = item.label;
+  let twist = null;
+  if (item.has_children) {
+    twist = el("button", "node-twist");
+    twist.type = "button";
+    twist.setAttribute("aria-label", t("expandNode"));
+    twist.setAttribute("aria-expanded", "false");
+    const caret = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    caret.setAttribute("class", "caret");
+    caret.setAttribute("viewBox", "0 0 16 16");
+    caret.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M6 3.5 12 8 6 12.5Z");
+    caret.append(path);
+    twist.append(caret);
+    twist.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggle();
+    });
+    row.append(twist);
+  } else {
+    row.append(el("span", "node-gap"));
+  }
+  row.append(label);
+  const kids = el("div", "node-kids");
+  kids.hidden = true;
+  wrap.append(row, kids);
+
+  let loaded = false;
+  let after = "";
+  let busy = false;
+
+  async function loadKids() {
+    if (busy) return;
+    busy = true;
+    const more = kids.querySelector(":scope > .node-more");
+    if (more) more.remove();
+    try {
+      const params = new URLSearchParams({ prefix: item.prefix_hex, limit: "100" });
+      if (after) params.set("after", after);
+      const body = await readJSON(await fetch("/api/children?" + params));
+      for (const child of body.items) kids.append(buildNode(child, depth + 1));
+      after = body.has_more ? body.next_hex : "";
+      if (after) {
+        const btn = el("button", "btn quiet node-more", t("loadMore"));
+        btn.dataset.i18n = "loadMore";
+        btn.type = "button";
+        btn.addEventListener("click", loadKids);
+        kids.append(btn);
+      }
+      if (!kids.children.length) {
+        const note = el("div", "tree-note", t("noChildren"));
+        note.dataset.i18n = "noChildren";
+        kids.append(note);
+      }
+      loaded = true;
+    } catch (err) {
+      kids.append(el("div", "tree-note", err.message));
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function toggle(open) {
+    const next = open === undefined ? kids.hidden : open;
+    kids.hidden = !next;
+    row.classList.toggle("open", next);
+    if (twist) {
+      twist.setAttribute("aria-label", t(next ? "collapseNode" : "expandNode"));
+      twist.setAttribute("aria-expanded", next ? "true" : "false");
+    }
+    if (next && !loaded) await loadKids();
+  }
+
+  label.addEventListener("click", () => {
+    setActive(row, item.prefix_hex, item.label);
+    if (item.has_children) toggle();
+  });
+  wrap.expand = () => toggle(true);
+  wrap.row = row;
+  return wrap;
+}
+
+function initTree() {
+  treeEl.replaceChildren();
+  activeRow = null;
+  const root = buildNode({ label: t("allKeys"), labelKey: "allKeys", prefix_hex: "", has_children: true }, 0);
+  treeEl.append(root);
+  root.row.classList.add("active");
+  activeRow = root.row;
+  root.expand();
+}
+
+/* ---------- events ---------- */
+$("#search-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  queryText = queryEl.value.trim();
+  if (queryText) {
+    if (activeRow) activeRow.classList.remove("active");
+    activeRow = null;
+    currentPrefix = "";
+    activeLabel = "";
+  }
+  reload();
+});
+listEl.addEventListener("scroll", requestMore);
+$("#tree-refresh").addEventListener("click", () => {
+  initTree();
+  currentPrefix = "";
+  activeLabel = "";
+  queryText = "";
+  queryEl.value = "";
+  reload();
+});
+$("#copy-content").addEventListener("click", (event) => copyText($("#detail-content").textContent, event.currentTarget));
+$("#copy-key").addEventListener("click", (event) => copyText(selected ? keyLabel(selected) : "", event.currentTarget));
+
+const confirmDialog = $("#confirm");
+const confirmOk = $("#confirm-ok");
+function openConfirm(mode, rows) {
+  confirmMode = mode;
+  const title = confirmDialog.querySelector("h2");
+  const hint = confirmDialog.querySelector("p");
+  if (mode === "one") {
+    title.textContent = t("deleteTitle");
+    hint.textContent = t("deleteHint");
+    $("#confirm-key").textContent = keyLabel(rows[0]);
+  } else {
+    title.textContent = t("deleteManyTitle", { n: rows.length });
+    hint.textContent = t("deleteManyHint", { n: rows.length });
+    const shown = rows.slice(0, 8).map(keyLabel);
+    let text = shown.join("\n");
+    if (rows.length > shown.length) text += "\n" + t("deleteManyMore", { n: rows.length - shown.length });
+    $("#confirm-key").textContent = text;
+  }
+  $("#confirm-error").textContent = "";
+  confirmOk.disabled = false;
+  confirmDialog.showModal();
+}
+async function deleteHex(hex) {
+  const res = await fetch("/api/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: hex, confirm: true }),
+  });
+  await readJSON(res);
+}
+$("#delete").addEventListener("click", () => {
+  if (!selected) return;
+  openConfirm("one", [selected]);
+});
+$("#delete-selected").addEventListener("click", () => {
+  const rows = [...picked.values()];
+  if (!rows.length) return;
+  openConfirm("many", rows);
+});
+$("#pick-all").addEventListener("change", () => {
+  const on = $("#pick-all").checked;
+  for (const line of keysBody.querySelectorAll(".keyline")) {
+    line.querySelector("input.pick").checked = on;
+    if (on) picked.set(line.row.hex, line.row);
+    else picked.delete(line.row.hex);
+  }
+  syncPicks();
+});
+$("#confirm-cancel").addEventListener("click", () => confirmDialog.close());
+confirmOk.addEventListener("click", async () => {
+  const rows = confirmMode === "one" ? (selected ? [selected] : []) : [...picked.values()];
+  if (!rows.length) return;
+  confirmOk.disabled = true;
+  $("#confirm-error").textContent = "";
+  try {
+    for (const row of rows) {
+      await deleteHex(row.hex);
+      removeKey(row.hex);
+    }
+    confirmDialog.close();
+  } catch (err) {
+    $("#confirm-error").textContent = err.message;
+    confirmOk.disabled = false;
+  }
+});
+
+function setDrawer(open) {
+  const root = $("#drawer-root");
+  root.classList.toggle("open", open);
+  root.setAttribute("aria-hidden", open ? "false" : "true");
+  if (open) $("#drawer-close").focus();
+  else closePickers();
+}
+$("#settings-btn").addEventListener("click", (event) => {
+  event.stopPropagation();
+  setDrawer(!$("#drawer-root").classList.contains("open"));
+});
+$("#drawer-backdrop").addEventListener("click", () => setDrawer(false));
+$("#drawer-close").addEventListener("click", () => setDrawer(false));
+$("#lang-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lang]");
+  if (button) setLang(button.dataset.lang);
+});
+$("#settings-drawer").addEventListener("click", (event) => {
+  const themeBtn = event.target.closest("[data-theme]");
+  if (themeBtn) setTheme(themeBtn.dataset.theme);
+});
+document.addEventListener("click", () => {
+  $("#chart-clear-pop").hidden = true;
+  $("#login-lang-list").hidden = true;
+  closePickers();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !document.querySelector(".picker.open")) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closePickers();
+  event.fdbPicker = true;
+}, true);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    if (event.fdbPicker) return;
+    if ($("#drawer-root").classList.contains("open")) {
+      setDrawer(false);
+      return;
+    }
+    $("#chart-clear-pop").hidden = true;
+    $("#login-lang-list").hidden = true;
+    if ($("#confirm").open || $("#write").open || $("#rename-dlg").open || $("#io-confirm").open || $("#config-confirm").open || $("#cluster-confirm").open) return;
+    hideDetail();
+  }
+});
+$("#create").addEventListener("click", () => openWrite("create"));
+$("#edit").addEventListener("click", () => { if (selected) openWrite("edit"); });
+$("#write-cancel").addEventListener("click", () => $("#write").close());
+$("#write-ok").addEventListener("click", async () => {
+  const mode = $("#write").dataset.mode;
+  const payload = { confirm: true, kind: $("#write-kind").value, value: $("#write-value").value };
+  if (mode === "edit") payload.key_hex = selected ? selected.hex : "";
+  else payload.key_text = $("#write-key").value.trim();
+  $("#write-ok").disabled = true;
+  $("#write-error").textContent = "";
+  try {
+    await postJSON("/api/set", payload);
+    $("#write").close();
+    await reload();
+  } catch (err) {
+    $("#write-error").textContent = err.message;
+  }
+  $("#write-ok").disabled = false;
+});
+$("#rename").addEventListener("click", () => {
+  if (!selected) return;
+  $("#rename-to").value = keyLabel(selected);
+  $("#rename-error").textContent = "";
+  $("#rename-dlg").showModal();
+  $("#rename-to").focus();
+});
+$("#rename-cancel").addEventListener("click", () => $("#rename-dlg").close());
+$("#rename-ok").addEventListener("click", async () => {
+  if (!selected) return;
+  $("#rename-ok").disabled = true;
+  $("#rename-error").textContent = "";
+  try {
+    await postJSON("/api/rename", { confirm: true, from_hex: selected.hex, to_text: $("#rename-to").value.trim() });
+    $("#rename-dlg").close();
+    await reload();
+  } catch (err) {
+    $("#rename-error").textContent = err.message;
+  }
+  $("#rename-ok").disabled = false;
+});
+$("#watch").addEventListener("click", () => {
+  watching = !watching;
+  armWatch();
+});
+$("#export").addEventListener("click", () => downloadDump("export").catch((err) => showError(err.message)));
+$("#backup").addEventListener("click", () => downloadDump("backup").catch((err) => showError(err.message)));
+$("#import").addEventListener("click", () => $("#import-file").click());
+$("#restore").addEventListener("click", () => $("#restore-file").click());
+$("#import-file").addEventListener("change", () => {
+  const file = $("#import-file").files[0];
+  $("#import-file").value = "";
+  if (file) readImportFile(file, "import");
+});
+$("#restore-file").addEventListener("change", () => {
+  const file = $("#restore-file").files[0];
+  $("#restore-file").value = "";
+  if (file) readImportFile(file, "restore");
+});
+$("#io-cancel").addEventListener("click", () => { pendingImport = null; $("#io-confirm").close(); });
+$("#io-ok").addEventListener("click", async () => {
+  if (!pendingImport) return;
+  $("#io-ok").disabled = true;
+  $("#io-error").textContent = "";
+  try {
+    await postJSON("/api/import", { confirm: true, keys: pendingImport });
+    pendingImport = null;
+    $("#io-confirm").close();
+    await reload();
+  } catch (err) {
+    $("#io-error").textContent = err.message;
+  }
+  $("#io-ok").disabled = false;
+});
+$("#config-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const chosen = selectedCluster();
+  if (chosen && !chosen.current) return;
+  if (!configBaseline) return;
+  const next = readConfigForm();
+  const base = configBaseline || {};
+  const lines = [];
+  const changes = {};
+  if (next.redundancy_mode !== base.redundancy_mode) {
+    lines.push("redundancy_mode " + base.redundancy_mode + " → " + next.redundancy_mode);
+    changes.redundancy_mode = next.redundancy_mode;
+  }
+  if (next.storage_engine !== base.storage_engine) {
+    lines.push("storage_engine " + base.storage_engine + " → " + next.storage_engine);
+    changes.storage_engine = next.storage_engine;
+  }
+  for (const name of ["commit_proxies", "grv_proxies", "logs", "resolvers"]) {
+    if (next[name] !== base[name]) {
+      lines.push(name + " " + (base[name] || "-") + " → " + next[name]);
+      changes[name] = next[name];
+    }
+  }
+  $("#config-msg").textContent = "";
+  if (!lines.length) {
+    $("#config-msg").textContent = t("configSame");
+    postJSON("/api/configure", { confirm: true, redundancy_mode: next.redundancy_mode, storage_engine: next.storage_engine }).catch((err) => {
+      $("#config-msg").textContent = err.message;
+    });
+    return;
+  }
+  $("#config-diff").textContent = lines.join("\n");
+  $("#config-error").textContent = "";
+  $("#config-confirm").dataset.changes = JSON.stringify(changes);
+  $("#config-confirm").showModal();
+});
+$("#config-cancel").addEventListener("click", () => $("#config-confirm").close());
+$("#config-ok").addEventListener("click", async () => {
+  const changes = JSON.parse($("#config-confirm").dataset.changes || "{}");
+  $("#config-ok").disabled = true;
+  $("#config-error").textContent = "";
+  try {
+    const body = await postJSON("/api/configure", Object.assign({ confirm: true }, changes));
+    $("#config-confirm").close();
+    $("#config-msg").textContent = body.changed ? t("configSaved") : t("configSame");
+    await pollOverview();
+  } catch (err) {
+    $("#config-error").textContent = err.message;
+  }
+  $("#config-ok").disabled = false;
+});
+$("#detail-close").addEventListener("click", hideDetail);
+$("#chart-clear").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const pop = $("#chart-clear-pop");
+  pop.hidden = !pop.hidden;
+});
+$("#chart-clear-pop").addEventListener("click", (event) => event.stopPropagation());
+$("#chart-clear-cancel").addEventListener("click", () => { $("#chart-clear-pop").hidden = true; });
+$("#chart-clear-ok").addEventListener("click", async () => {
+  try {
+    await clearSamples();
+  } catch (err) {
+    $("#chart-clear-pop p").textContent = err.message;
+  }
+});
+$("#chart").addEventListener("wheel", (event) => {
+  event.preventDefault();
+  const next = grainIndex + (event.deltaY > 0 ? 1 : -1);
+  const clamped = Math.max(0, Math.min(GRAINS.length - 1, next));
+  if (clamped === grainIndex) return;
+  grainIndex = clamped;
+  grainSet = true;
+  drawChart();
+}, { passive: false });
+
+function closePickers(except) {
+  for (const picker of document.querySelectorAll(".picker.open")) {
+    if (picker === except) continue;
+    picker.classList.remove("open");
+    const menu = picker.querySelector(".picker-menu");
+    const btn = picker.querySelector(".picker-btn");
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function dressSelect(select) {
+  const picker = el("div", "picker");
+  select.parentNode.insertBefore(picker, select);
+  const btn = el("button", "picker-btn");
+  btn.type = "button";
+  btn.setAttribute("aria-haspopup", "listbox");
+  btn.setAttribute("aria-expanded", "false");
+  const value = el("span", "picker-value");
+  btn.append(value, icon("chevron-down"));
+  const menu = el("div", "picker-menu");
+  menu.hidden = true;
+  menu.setAttribute("role", "listbox");
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+  picker.append(btn, menu, select);
+
+  function paint() {
+    const options = [...select.options];
+    const current = options.find((opt) => opt.value === select.value) || options[0];
+    value.textContent = current ? current.textContent : "";
+    menu.replaceChildren();
+    for (const opt of options) {
+      const on = opt.value === select.value;
+      const item = el("button", "picker-opt" + (on ? " on" : ""), opt.textContent);
+      item.type = "button";
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", on ? "true" : "false");
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
+        select.value = opt.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        paint();
+        closePickers();
+      });
+      menu.append(item);
+    }
+  }
+
+  function open() {
+    closePickers(picker);
+    paint();
+    menu.hidden = false;
+    picker.classList.add("open");
+    btn.setAttribute("aria-expanded", "true");
+    const current = menu.querySelector(".on") || menu.querySelector("button");
+    if (current) current.focus();
+  }
+
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (menu.hidden) open();
+    else closePickers();
+  });
+  menu.addEventListener("keydown", (event) => {
+    const items = [...menu.querySelectorAll("button")];
+    const index = items.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(0, index - 1);
+      if (items[next]) items[next].focus();
+    }
+  });
+  select.addEventListener("change", paint);
+  new MutationObserver(paint).observe(select, { childList: true });
+  select.paintPicker = paint;
+  paint();
+}
+
+let clusterItems = [];
+let selectedClusterId = "";
+let clusterPending = null;
+function selectedCluster() {
+  return clusterItems.find((item) => item.id === selectedClusterId) || clusterItems.find((item) => item.current) || null;
+}
+function paintClusterConfig() {
+  const title = $("#config-title");
+  if (!title) return;
+  const item = selectedCluster();
+  const form = $("#config-form");
+  const locked = $("#config-locked");
+  if (!item) {
+    title.textContent = t("clusterConfig");
+    $("#config-target").textContent = "";
+    if (form) form.classList.remove("locked");
+    if (locked) locked.hidden = true;
+    return;
+  }
+  title.textContent = t("clusterConfigOf", { name: item.name || item.id });
+  $("#config-target").textContent = item.connection || "";
+  const live = !!item.current;
+  if (form) {
+    form.classList.toggle("locked", !live);
+    for (const node of form.querySelectorAll("label, #config-scope, #config-note, #config-actions")) node.hidden = !live;
+  }
+  if (locked) {
+    locked.hidden = live;
+    locked.textContent = live ? "" : t("clusterConfigWait");
+  }
+  if (!live) {
+    $("#config-note").textContent = "";
+    $("#config-msg").textContent = "";
+  } else if (lastOverview) {
+    fillConfig(lastOverview);
+  }
+}
+async function loadClusters() {
+  const list = $("#cluster-list");
+  if (!list) return;
+  try {
+    const body = await readJSON(await fetch("/api/clusters"));
+    clusterItems = Array.isArray(body.clusters) ? body.clusters : [];
+    if (!clusterItems.some((item) => item.id === selectedClusterId)) {
+      const currentItem = clusterItems.find((item) => item.current);
+      selectedClusterId = currentItem ? currentItem.id : "";
+    }
+    list.replaceChildren();
+    for (const item of clusterItems) {
+      const row = el("div", "cluster-row" + (item.id === selectedClusterId ? " on" : ""));
+      row.addEventListener("click", (event) => {
+        if (event.target.closest("button")) return;
+        selectedClusterId = item.id;
+        for (const other of list.querySelectorAll(".cluster-row")) other.classList.remove("on");
+        row.classList.add("on");
+        paintClusterConfig();
+      });
+      const text = el("div");
+      text.append(el("b", "", item.name || item.id));
+      text.append(el("small", "", item.connection || ""));
+      if (item.builtin) text.append(el("span", "note", t("clusterBuiltin")));
+      const actions = el("div", "cluster-actions");
+      if (item.current) actions.append(el("span", "tag", t("clusterCurrent")));
+      else {
+        const use = el("button", "btn", t("clusterUse"));
+        use.type = "button";
+        use.addEventListener("click", () => askCluster("use", item));
+        actions.append(use);
+        if (!item.builtin) {
+          const remove = el("button", "btn", t("clusterRemove"));
+          remove.type = "button";
+          remove.addEventListener("click", () => askCluster("remove", item));
+          actions.append(remove);
+        }
+      }
+      row.append(text, actions);
+      list.append(row);
+    }
+    paintClusterConfig();
+    $("#cluster-msg").textContent = "";
+  } catch (err) {
+    $("#cluster-msg").textContent = err.message;
+  }
+}
+function askCluster(mode, item) {
+  clusterPending = { mode, item };
+  $("#cluster-confirm-title").textContent = t(mode === "use" ? "clusterUseTitle" : "clusterRemoveTitle");
+  $("#cluster-confirm-hint").textContent = t(mode === "use" ? "clusterUseHint" : "clusterRemoveHint");
+  $("#cluster-confirm-key").textContent = (item.name || "") + "\n" + (item.connection || "");
+  $("#cluster-confirm-error").textContent = "";
+  const ok = $("#cluster-confirm-ok");
+  ok.textContent = t(mode === "use" ? "clusterUse" : "clusterRemove");
+  ok.classList.toggle("primary", mode === "use");
+  ok.classList.toggle("remove", mode !== "use");
+  $("#cluster-confirm").showModal();
+}
+$("#cluster-add").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("#cluster-msg").textContent = "";
+  try {
+    await postJSON("/api/clusters", { confirm: true, name: $("#cluster-name").value.trim(), connection: $("#cluster-conn").value.trim() });
+    $("#cluster-name").value = "";
+    $("#cluster-conn").value = "";
+    await loadClusters();
+  } catch (err) {
+    $("#cluster-msg").textContent = err.message;
+  }
+});
+$("#cluster-confirm-cancel").addEventListener("click", () => { clusterPending = null; $("#cluster-confirm").close(); });
+$("#cluster-confirm-ok").addEventListener("click", async () => {
+  if (!clusterPending) return;
+  const pending = clusterPending;
+  const ok = $("#cluster-confirm-ok");
+  ok.disabled = true;
+  $("#cluster-confirm-error").textContent = "";
+  try {
+    if (pending.mode === "use") {
+      await postJSON("/api/clusters/use", { confirm: true, id: pending.item.id });
+      samples = [];
+      trendSince = 0;
+      grainSet = false;
+      await pollOverview();
+      if (current === "data") {
+        initTree();
+        await reload();
+      }
+    } else {
+      await postJSON("/api/clusters/remove", { confirm: true, id: pending.item.id });
+    }
+    clusterPending = null;
+    $("#cluster-confirm").close();
+    await loadClusters();
+  } catch (err) {
+    $("#cluster-confirm-error").textContent = err.message;
+  }
+  ok.disabled = false;
+});
+
+for (const select of document.querySelectorAll("select")) dressSelect(select);
+
+applyI18n();
+new ResizeObserver(() => drawChart()).observe($("#chart"));
+window.addEventListener("hashchange", route);
+$("#login-lang-btn").addEventListener("click", (event) => {
+  event.stopPropagation();
+  $("#login-lang-list").hidden = !$("#login-lang-list").hidden;
+});
+$("#login-lang-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lang]");
+  if (!button) return;
+  setLang(button.dataset.lang);
+  $("#login-lang-list").hidden = true;
+});
+$("#login-theme").addEventListener("click", () => setTheme(theme === "dark" ? "light" : "dark"));
+$("#login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const username = $("#login-user").value;
+  const password = $("#login-pass").value;
+  const error = $("#login-error");
+  error.textContent = "";
+  if (!username.trim() || !password) {
+    error.textContent = t("loginEmpty");
+    return;
+  }
+  const button = $("#login-submit");
+  button.disabled = true;
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (res.status === 429) error.textContent = t("loginLocked");
+    else if (!res.ok) error.textContent = t("loginFailed");
+    else {
+      $("#login-pass").value = "";
+      enterApp();
+    }
+  } catch (err) {
+    error.textContent = t("loginFailed");
+  }
+  button.disabled = false;
+});
+$("#logout-btn").addEventListener("click", async () => {
+  try { await postJSON("/api/logout", {}); } catch (err) {}
+  location.reload();
+});
+async function boot() {
+  try {
+    const session = await readJSON(await fetch("/api/session"));
+    authRequired = !!session.required;
+    if (session.required && !session.authenticated) {
+      showLogin();
+      return;
+    }
+  } catch (err) {
+    showLogin();
+    $("#login-error").textContent = err.message;
+    return;
+  }
+  enterApp();
+}
+boot();
+</script>
+</body>
+</html>
