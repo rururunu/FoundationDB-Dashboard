@@ -110,6 +110,8 @@ make up
 
 應用程式版本於映像建置時寫入（`APP_VERSION`，預設 `1.0.0`）。
 
-## 授權說明
+## 授權
+
+本專案採用 [MIT License](LICENSE)。
 
 本專案是非官方的 FoundationDB 用戶端介面。FoundationDB 本身請遵循 Apple 的授權。

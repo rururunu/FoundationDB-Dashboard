@@ -110,6 +110,8 @@ make up
 
 Die App-Version wird beim Image-Build gesetzt (`APP_VERSION`, Standard `1.0.0`).
 
-## Hinweis zur Lizenz
+## Lizenz
 
-Dieses Projekt ist eine inoffizielle Client-Oberfläche für FoundationDB. FoundationDB selbst unterliegt den Lizenzen von Apple.
+Dieses Projekt steht unter der [MIT License](LICENSE).
+
+Es ist eine inoffizielle Client-Oberfläche für FoundationDB. FoundationDB selbst unterliegt den Lizenzen von Apple.

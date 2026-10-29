@@ -110,6 +110,8 @@ make up
 
 应用版本在镜像构建时写入（`APP_VERSION`，默认 `1.0.0`）。
 
-## 许可说明
+## 许可
+
+本项目采用 [MIT License](LICENSE)。
 
 本项目是非官方的 FoundationDB 客户端界面。FoundationDB 本身请遵循 Apple 的许可。

@@ -110,6 +110,8 @@ make up
 
 App version is stamped at image build (`APP_VERSION`, default `1.0.0`).
 
-## License note
+## License
 
-This project is an unofficial client for FoundationDB. FoundationDB is an Apple project; see Apple’s licensing for the database itself.
+This project is released under the [MIT License](LICENSE).
+
+It is an unofficial client for FoundationDB. FoundationDB itself is an Apple project; see Apple’s licensing for the database.

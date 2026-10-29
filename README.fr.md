@@ -110,6 +110,8 @@ make up
 
 La version de l’application est inscrite à la construction de l’image (`APP_VERSION`, défaut `1.0.0`).
 
-## Note de licence
+## Licence
 
-Ce projet est une interface cliente non officielle pour FoundationDB. FoundationDB elle-même suit les licences d’Apple.
+Ce projet est publié sous la [licence MIT](LICENSE).
+
+C’est une interface cliente non officielle pour FoundationDB. FoundationDB elle-même suit les licences d’Apple.

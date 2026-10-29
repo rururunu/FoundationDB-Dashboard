@@ -110,6 +110,8 @@ make up
 
 アプリのバージョンはイメージビルド時に埋め込まれます（`APP_VERSION`、既定 `1.0.0`）。
 
-## ライセンスについて
+## ライセンス
+
+本プロジェクトは [MIT License](LICENSE) です。
 
 本プロジェクトは非公式の FoundationDB クライアント UI です。FoundationDB 本体は Apple のライセンスに従ってください。
