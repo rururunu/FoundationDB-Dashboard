@@ -172,9 +172,9 @@
   .topbar .sub { color: var(--faint); font-size: 13px; margin-left: 10px; font-weight: 450; letter-spacing: -0.01em; }
   .badge {
     display: inline-flex; align-items: center; gap: 6px;
-    height: 26px; padding: 0 10px;
+    height: 32px; padding: 0 12px;
     border-radius: 999px;
-    font-size: 12.5px; font-weight: 600;
+    font-size: 12.5px; font-weight: 500;
     background: var(--soft); color: var(--muted);
   }
   .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -192,8 +192,9 @@
     font-weight: 530;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
-  #settings-btn { width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); border-radius: 50%; }
-  #settings-btn:hover { background: var(--fill); color: var(--ink); }
+  #settings-btn, #login-github { width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--muted); border-radius: 50%; }
+  #settings-btn:hover, #login-github:hover { background: var(--fill); color: var(--ink); }
+  #login-github { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 0.5px var(--line); }
   .badge { position: relative; cursor: pointer; outline: none; }
   .tip {
     display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
@@ -227,9 +228,15 @@
   #drawer-root.open .drawer { transform: none; opacity: 1; }
   .drawer-head { display: flex; align-items: center; justify-content: space-between; height: 58px; padding: 0 12px 0 22px; flex: none; }
   .drawer-head h2 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -0.022em; }
-  .drawer-body { padding: 4px 22px 22px; display: grid; gap: 22px; align-content: start; }
+  .drawer-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 22px 22px; display: grid; gap: 22px; align-content: start; }
   .drawer-group { display: grid; gap: 8px; }
   .drawer-body .field { margin: 0; }
+  .drawer-foot { flex: none; padding: 16px 22px 22px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+  .about-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 20px; }
+  .about-name, .about-ver { margin: 0; font-size: 13px; line-height: 20px; font-weight: 500; letter-spacing: -0.01em; }
+  .about-name { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .about-ver { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+  .drawer-foot .btn { width: 100%; text-decoration: none; color: var(--ink); }
   .menu-label { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: -0.01em; }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; border-radius: 10px; background: var(--fill); }
   .seg button { height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font-weight: 500; }
@@ -513,6 +520,7 @@
   <symbol id="i-sun" viewBox="0 0 256 256" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></symbol>
   <symbol id="i-moon" viewBox="0 0 256 256" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></symbol>
   <symbol id="i-log-in" viewBox="0 0 256 256" fill="currentColor"><path d="M141.66,133.66l-40,40a8,8,0,0,1-11.32-11.32L116.69,136H24a8,8,0,0,1,0-16h92.69L90.34,93.66a8,8,0,0,1,11.32-11.32l40,40A8,8,0,0,1,141.66,133.66ZM200,32H136a8,8,0,0,0,0,16h56V208H136a8,8,0,0,0,0,16h64a8,8,0,0,0,8-8V40A8,8,0,0,0,200,32Z"/></symbol>
+  <symbol id="i-github" viewBox="0 0 256 256" fill="currentColor"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></symbol>
 </svg>
 <div id="login" class="login" hidden>
   <div class="login-tools">
@@ -535,6 +543,9 @@
       <svg class="icon theme-sun" aria-hidden="true"><use href="#i-sun"/></svg>
       <svg class="icon theme-moon" aria-hidden="true"><use href="#i-moon"/></svg>
     </button>
+    <a id="login-github" href="https://github.com/rururunu/FoundationDB-Dashboard" target="_blank" rel="noopener noreferrer" data-i18n-aria="github" aria-label="GitHub">
+      <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+    </a>
   </div>
   <form id="login-form" class="login-card">
     <h1>FoundationDB Dashboard</h1>
@@ -772,6 +783,16 @@
         </div>
       </div>
     </div>
+    <div class="drawer-foot">
+      <div class="about-line">
+        <span id="about-name" class="about-name">foundationdb-dashboard</span>
+        <span id="about-ver" class="about-ver"></span>
+      </div>
+      <a id="about-github" class="btn" href="https://github.com/rururunu/FoundationDB-Dashboard" target="_blank" rel="noopener noreferrer">
+        <svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>
+        <span data-i18n="github">GitHub</span>
+      </a>
+    </div>
   </aside>
 </div>
 
@@ -939,7 +960,7 @@ const DICT = {
     configNote: "{n} processes. single needs 1, double needs 2, triple needs 3.",
     configSame: "Nothing changed", configTitle: "Change cluster configuration?",
     configHint: "Only the fields that differ are written.", configSaved: "Configuration saved",
-    cancel: "Cancel", confirmDelete: "Delete", settings: "Settings", language: "Language", appearance: "Appearance",
+    cancel: "Cancel", confirmDelete: "Delete", settings: "Settings", language: "Language", appearance: "Appearance", github: "GitHub",
     clusters: "Clusters", clusterAdd: "Add cluster", clusterName: "Name", clusterConn: "Connection string",
     clusterUse: "Connect", clusterCurrent: "Current", clusterRemove: "Remove", clusterBuiltin: "From the environment",
     clusterUseTitle: "Connect to this cluster?", clusterUseHint: "The page switches to that cluster. The chart starts recording again.",
@@ -1016,7 +1037,7 @@ const DICT = {
     configNote: "当前 {n} 个进程。single 需要 1 个，double 需要 2 个，triple 需要 3 个。",
     configSame: "没有变化", configTitle: "修改集群配置？",
     configHint: "只会写入有变化的项。", configSaved: "配置已保存",
-    cancel: "取消", confirmDelete: "确认删除", settings: "设置", language: "语言", appearance: "外观",
+    cancel: "取消", confirmDelete: "确认删除", settings: "设置", language: "语言", appearance: "外观", github: "GitHub",
     clusters: "集群", clusterAdd: "添加集群", clusterName: "名称", clusterConn: "连接串",
     clusterUse: "连接", clusterCurrent: "当前", clusterRemove: "移除", clusterBuiltin: "启动时的连接",
     clusterUseTitle: "连接到这个集群？", clusterUseHint: "页面会改看这个集群。图表从现在重新记录。",
@@ -1093,7 +1114,7 @@ const DICT = {
     configNote: "目前 {n} 個處理程序。single 需要 1 個，double 需要 2 個，triple 需要 3 個。",
     configSame: "沒有變化", configTitle: "修改叢集設定？",
     configHint: "只會寫入有變化的項目。", configSaved: "設定已儲存",
-    cancel: "取消", confirmDelete: "確認刪除", settings: "設定", language: "語言", appearance: "外觀",
+    cancel: "取消", confirmDelete: "確認刪除", settings: "設定", language: "語言", appearance: "外觀", github: "GitHub",
     clusters: "叢集", clusterAdd: "新增叢集", clusterName: "名稱", clusterConn: "連線字串",
     clusterUse: "連線", clusterCurrent: "目前", clusterRemove: "移除", clusterBuiltin: "啟動時的連線",
     clusterUseTitle: "連線到這個叢集？", clusterUseHint: "頁面會改看這個叢集。圖表從現在重新記錄。",
@@ -1170,7 +1191,7 @@ const DICT = {
     configNote: "Процессов: {n}. single — 1, double — 2, triple — 3.",
     configSame: "Без изменений", configTitle: "Изменить конфигурацию кластера?",
     configHint: "Записываются только изменившиеся поля.", configSaved: "Конфигурация сохранена",
-    cancel: "Отмена", confirmDelete: "Удалить", settings: "Настройки", language: "Язык", appearance: "Оформление",
+    cancel: "Отмена", confirmDelete: "Удалить", settings: "Настройки", language: "Язык", appearance: "Оформление", github: "GitHub",
     clusters: "Кластеры", clusterAdd: "Добавить кластер", clusterName: "Имя", clusterConn: "Строка подключения",
     clusterUse: "Подключить", clusterCurrent: "Текущий", clusterRemove: "Удалить", clusterBuiltin: "Из окружения",
     clusterUseTitle: "Подключиться к этому кластеру?", clusterUseHint: "Страница переключится на него. График начнёт запись заново.",
@@ -1247,7 +1268,7 @@ const DICT = {
     configNote: "プロセス {n} 個。single は 1、double は 2、triple は 3 必要です。",
     configSame: "変更はありません", configTitle: "クラスタ構成を変更しますか？",
     configHint: "変わった項目だけを書き込みます。", configSaved: "構成を保存しました",
-    cancel: "キャンセル", confirmDelete: "削除する", settings: "設定", language: "言語", appearance: "外観",
+    cancel: "キャンセル", confirmDelete: "削除する", settings: "設定", language: "言語", appearance: "外観", github: "GitHub",
     clusters: "クラスタ", clusterAdd: "クラスタを追加", clusterName: "名前", clusterConn: "接続文字列",
     clusterUse: "接続", clusterCurrent: "現在", clusterRemove: "削除", clusterBuiltin: "起動時の接続",
     clusterUseTitle: "このクラスタに接続しますか？", clusterUseHint: "ページはこのクラスタを表示します。グラフは今から記録し直します。",
@@ -1324,7 +1345,7 @@ const DICT = {
     configNote: "{n} Prozesse. single braucht 1, double 2, triple 3.",
     configSame: "Nichts geändert", configTitle: "Clusterkonfiguration ändern?",
     configHint: "Nur geänderte Felder werden geschrieben.", configSaved: "Konfiguration gespeichert",
-    cancel: "Abbrechen", confirmDelete: "Löschen", settings: "Einstellungen", language: "Sprache", appearance: "Darstellung",
+    cancel: "Abbrechen", confirmDelete: "Löschen", settings: "Einstellungen", language: "Sprache", appearance: "Darstellung", github: "GitHub",
     clusters: "Cluster", clusterAdd: "Cluster hinzufügen", clusterName: "Name", clusterConn: "Verbindungszeichenfolge",
     clusterUse: "Verbinden", clusterCurrent: "Aktiv", clusterRemove: "Entfernen", clusterBuiltin: "Aus der Umgebung",
     clusterUseTitle: "Mit diesem Cluster verbinden?", clusterUseHint: "Die Seite wechselt dorthin. Die Aufzeichnung beginnt neu.",
@@ -1401,7 +1422,7 @@ const DICT = {
     configNote: "{n} processus. single en demande 1, double 2, triple 3.",
     configSame: "Aucun changement", configTitle: "Modifier la configuration du cluster ?",
     configHint: "Seuls les champs modifiés sont écrits.", configSaved: "Configuration enregistrée",
-    cancel: "Annuler", confirmDelete: "Supprimer", settings: "Réglages", language: "Langue", appearance: "Apparence",
+    cancel: "Annuler", confirmDelete: "Supprimer", settings: "Réglages", language: "Langue", appearance: "Apparence", github: "GitHub",
     clusters: "Clusters", clusterAdd: "Ajouter un cluster", clusterName: "Nom", clusterConn: "Chaîne de connexion",
     clusterUse: "Connecter", clusterCurrent: "Actuel", clusterRemove: "Retirer", clusterBuiltin: "Depuis l'environnement",
     clusterUseTitle: "Se connecter à ce cluster ?", clusterUseHint: "La page passe sur ce cluster. Le graphique recommence à enregistrer.",
@@ -1447,6 +1468,7 @@ const DICT = {
 
 let lang = "en";
 let theme = "light";
+let appVersion = "";
 try {
   const savedLang = localStorage.getItem("fdb-lang");
   if (DICT[savedLang]) lang = savedLang;
@@ -1493,6 +1515,7 @@ function applyI18n() {
   for (const button of document.querySelectorAll("#lang-list button, #login-lang-list button")) button.classList.toggle("on", button.dataset.lang === lang);
   for (const button of document.querySelectorAll("#theme-seg button")) button.classList.toggle("on", button.dataset.theme === theme);
   paintLoginTools();
+  paintAbout();
   paintClusterConfig();
   syncPicks();
   const watchLabel = $("#watch span");
@@ -3085,9 +3108,18 @@ $("#logout-btn").addEventListener("click", async () => {
   try { await postJSON("/api/logout", {}); } catch (err) {}
   location.reload();
 });
+function paintAbout(session) {
+  if (session) {
+    if (session.app && $("#about-name")) $("#about-name").textContent = session.app;
+    if (session.version) appVersion = session.version;
+  }
+  const ver = $("#about-ver");
+  if (ver) ver.textContent = appVersion ? t("version", { v: appVersion }) : "";
+}
 async function boot() {
   try {
     const session = await readJSON(await fetch("/api/session"));
+    paintAbout(session);
     authRequired = !!session.required;
     if (session.required && !session.authenticated) {
       showLogin();

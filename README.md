@@ -1,51 +1,115 @@
-# FoundationDB dashboard
+# FoundationDB Dashboard
 
-一个镜像，里面是这个页面和 FoundationDB 7.3.62 客户端。数据库在镜像外面，用 `FDB_CLUSTER_FILE` 或 `FDB_CONNECTION_STRING` 接入。
+**English** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [Русский](README.ru.md) | [日本語](README.ja.md) | [Deutsch](README.de.md) | [Français](README.fr.md)
+
+Unofficial Dockerized web console for FoundationDB clusters. One image ships the UI and the FoundationDB **7.3.62** client. The database stays outside the image.
+
+FoundationDB: [github.com/apple/foundationdb](https://github.com/apple/foundationdb)  
+Image: [hub.docker.com/r/runu/foundationdb-dashboard](https://hub.docker.com/r/runu/foundationdb-dashboard)
+
+## Quick start
 
 ```bash
-docker build -t foundationdb-dashboard:7.3.62 .
-
 docker run --rm \
   -p 127.0.0.1:8090:8080 \
   --network local-foundationdb_default \
   -e FDB_CONNECTION_STRING=docker:docker@foundationdb:4500 \
-  foundationdb-dashboard:7.3.62
+  runu/foundationdb-dashboard:7.3.62
 ```
 
-已经在跑的本地集群：
+Against a cluster that is already on Docker Compose:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-打开 http://127.0.0.1:8090/
+Open [http://127.0.0.1:8090/](http://127.0.0.1:8090/).
 
-进程监听 `PORT`（默认 8080）。把该端口发布到本机 `127.0.0.1`。`FDB_CLUSTER_FILE` 是容器内的集群文件路径；两者同时设置时使用集群文件。
+Publish the container port only on `127.0.0.1`. The process listens on `PORT` (default `8080`).
 
-## 页面
+## Configuration
 
-- **概览**：集群是否可用、数据状态、恢复状态、冗余模式、存储引擎、协调者与仲裁、进程与角色、读写负载、延迟、可容忍故障数。数据来自 `\xff\xff/status/json`，每 3 秒刷新一次。
-- **数据浏览**：左边是目录树，中间是键、值、类型、大小，右边是选中键的完整内容。列表向下滚动时自动加载更多。
+| Variable | Required | Description |
+| --- | --- | --- |
+| `FDB_CONNECTION_STRING` | one of these | Cluster connection string, for example `docker:docker@foundationdb:4500` |
+| `FDB_CLUSTER_FILE` | one of these | Path to a cluster file inside the container. Wins when both are set |
+| `PORT` | no | Listen port inside the container (default `8080`) |
+| `TREND_FILE` | no | Path for the 24h read/write trend buffer |
+| `CLUSTERS_FILE` | no | Path for the saved multi-cluster catalog |
+| `AUTH` | no | `on` / `off` (default off). When on, `AUTH_USER` and `AUTH_PASSWORD` are required |
+| `AUTH_USER` | with auth | Sign-in username (max 64 characters) |
+| `AUTH_PASSWORD` | with auth | Sign-in password (max 256 characters) |
 
-搜索框直接写 tuple，不用十六进制：
+Example with sign-in:
+
+```bash
+docker run --rm \
+  -p 127.0.0.1:8090:8080 \
+  --network local-foundationdb_default \
+  -e FDB_CONNECTION_STRING=docker:docker@foundationdb:4500 \
+  -e AUTH=on \
+  -e AUTH_USER=admin \
+  -e AUTH_PASSWORD=secret \
+  runu/foundationdb-dashboard:7.3.62
+```
+
+## Pages
+
+### Overview
+
+![Overview](docs/imgs/overview.png)
+
+Cluster availability, data state, recovery, redundancy, storage engine, coordinators, processes and roles, read/write load, latency, and fault tolerance. Status comes from `\xff\xff/status/json` and refreshes every 3 seconds while the tab is visible. The chart is sampled in the background every 5 seconds and kept for 24 hours.
+
+### Data browser
+
+![Data browser](docs/imgs/data.png)
+
+Directory tree on the left, key table in the middle (key, value preview, type, size), detail pane on the right. Scroll the list to load more.
+
+Search accepts tuple text, not only hex:
 
 ```text
 "M"
 ("M", uuid(3c6047fa-4f4e-466f-b349-49b72f5d6260), "l")
 ```
 
-支持字符串、整数、小数、`true` / `false` / `null`、`0x` 字节、`uuid(...)`、`float32(...)`、`Versionstamp(...)` 和嵌套 tuple。写一个前缀就列出这个前缀下的所有键，不写就列出整个用户键空间。
+Supported query pieces: strings, integers, floats, `true` / `false` / `null`, `0x` bytes, `uuid(...)`, `float32(...)`, `Versionstamp(...)`, and nested tuples. A prefix lists keys under that prefix; an empty query lists the user key space.
 
-值按 JSON、可读文本、tuple、二进制的顺序识别。8 字节小端整数会附一行说明。更多内容在右侧详情里，十六进制可折叠查看。
+Values are classified as JSON, readable text, tuple, or binary. 4-byte and 8-byte little-endian integers get a short note. Full text and a collapsible hex dump live in the detail pane.
 
-删除只针对单个键，点击后要在对话框里确认。服务端要求请求里带 `confirm: true`，不提供范围删除。
+Writes:
 
-## 测试
+- Create, edit, and rename exact keys
+- Delete one key or a multi-select of exact keys (confirm dialog; server requires `confirm: true`)
+- Import / export, backup / restore
+- Watch a key and refresh when its value changes
 
-不依赖客户端的测试：
+There is no range delete.
+
+### Configuration
+
+![Configuration](docs/imgs/configuration.png)
+
+Manage saved cluster connections (add, switch, remove). The builtin env connection cannot be removed. Switching clears the trend buffer.
+
+For the **connected** cluster, edit redundancy mode, storage engine, and the four role counts (commit proxies, GRV proxies, logs, resolvers). Coordinators, regions, encryption, and tenant mode stay with `fdbcli`.
+
+## Build and test
 
 ```bash
 make test
 ```
 
-`internal/fdbstore` 通过 cgo 链接 `libfdb_c`，在镜像构建里随 `go test ./...` 一起跑。
+That runs packages that do not need `libfdb_c`. The Docker image build runs `go test ./...`, including `internal/fdbstore` (linux + cgo).
+
+```bash
+make build
+make up
+```
+
+App version is stamped at image build (`APP_VERSION`, default `1.0.0`).
+
+## License note
+
+This project is an unofficial client for FoundationDB. FoundationDB is an Apple project; see Apple’s licensing for the database itself.

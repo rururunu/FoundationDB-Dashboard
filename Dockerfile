@@ -24,8 +24,9 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+ARG APP_VERSION=1.0.0
 RUN go test ./...
-RUN go build -trimpath -ldflags="-s -w" -o /out/foundationdb-dashboard ./cmd/foundationdb-dashboard
+RUN go build -trimpath -ldflags="-s -w -X foundationdb-dashboard/internal/buildinfo.Version=${APP_VERSION}" -o /out/foundationdb-dashboard ./cmd/foundationdb-dashboard
 
 FROM debian:bookworm-slim
 

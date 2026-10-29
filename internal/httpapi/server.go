@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"foundationdb-dashboard/internal/auth"
+	"foundationdb-dashboard/internal/buildinfo"
 	"foundationdb-dashboard/internal/cluster"
 	"foundationdb-dashboard/internal/clusters"
 	"foundationdb-dashboard/internal/present"
@@ -118,14 +119,19 @@ func publicWhileSignedOut(r *http.Request) bool {
 }
 
 func (s *Server) session(w http.ResponseWriter, r *http.Request) {
+	body := map[string]any{
+		"app":     buildinfo.Name,
+		"version": buildinfo.Version,
+	}
 	if s.Auth == nil {
-		writeJSON(w, http.StatusOK, map[string]bool{"required": false, "authenticated": true})
+		body["required"] = false
+		body["authenticated"] = true
+		writeJSON(w, http.StatusOK, body)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{
-		"required":      true,
-		"authenticated": s.Auth.Valid(sessionToken(r)),
-	})
+	body["required"] = true
+	body["authenticated"] = s.Auth.Valid(sessionToken(r))
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {

@@ -76,7 +76,7 @@ func TestSessionWhenAuthIsOff(t *testing.T) {
 	h := (&Server{Store: &fakeStore{}, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}).Handler()
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/session", nil))
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"required":false`) {
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"required":false`) || !strings.Contains(rec.Body.String(), `"app":"foundationdb-dashboard"`) {
 		t.Fatalf("session %d %s", rec.Code, rec.Body.String())
 	}
 	rec = httptest.NewRecorder()

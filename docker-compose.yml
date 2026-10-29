@@ -2,8 +2,7 @@
 # This file does not start a database.
 services:
   dashboard:
-    build: .
-    image: foundationdb-dashboard:7.3.62
+    image: runu/foundationdb-dashboard:7.3.62
     container_name: foundationdb-dashboard
     ports:
       - "127.0.0.1:8090:8080"
